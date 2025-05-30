@@ -32,7 +32,7 @@ const navigationItems = [
     ),
   },
   {
-    name: "Daily Feed",
+    name: "Feed",
     href: "/feed",
     icon: (
       <svg
