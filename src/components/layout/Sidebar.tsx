@@ -51,8 +51,8 @@ const navigationItems = [
     ),
   },
   {
-    name: "Content Library",
-    href: "/library",
+    name: "Lessons",
+    href: "/lesson",
     icon: (
       <svg
         className="w-5 h-5"

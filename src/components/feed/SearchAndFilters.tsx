@@ -29,10 +29,10 @@ const contentTypes: {
   { value: "podcast", label: "Podcasts", icon: "🎙️" },
 ];
 
-const levels: { value: ContentItem["level"]; label: string }[] = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
+const levels: { value: ContentItem["level"]; label: string; icon: string }[] = [
+  { value: "beginner", label: "Beginner", icon: "🌱" },
+  { value: "intermediate", label: "Intermediate", icon: "⚡" },
+  { value: "advanced", label: "Advanced", icon: "🚀" },
 ];
 
 const topics = [
@@ -262,7 +262,9 @@ export default function SearchAndFilters({
           >
             <span>
               {filters.level
-                ? levels.find((l) => l.value === filters.level)?.label
+                ? `${levels.find((l) => l.value === filters.level)?.icon} ${
+                    levels.find((l) => l.value === filters.level)?.label
+                  }`
                 : "Difficulty"}
             </span>
             <svg
@@ -289,13 +291,14 @@ export default function SearchAndFilters({
                   <button
                     key={level.value}
                     onClick={() => handleLevelChange(level.value)}
-                    className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                    className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center space-x-2 ${
                       filters.level === level.value
                         ? "bg-emerald-100 text-emerald-800"
                         : "text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    {level.label}
+                    <span>{level.icon}</span>
+                    <span>{level.label}</span>
                   </button>
                 ))}
                 {filters.level && (
