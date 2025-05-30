@@ -45,7 +45,7 @@ const LessonCard = ({ lesson }: { lesson: Lesson }) => {
 
   return (
     <div
-      className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
+      className={`border rounded-lg p-4 hover:shadow-md transition-shadow h-full flex flex-col ${
         lesson.isLocked
           ? "opacity-50 cursor-not-allowed"
           : "cursor-pointer hover:border-emerald-300"
@@ -81,11 +81,13 @@ const LessonCard = ({ lesson }: { lesson: Lesson }) => {
           {lesson.isCompleted && <span className="text-green-500">✅</span>}
         </div>
       </div>
-      <p className="text-gray-600 text-sm mb-3">{lesson.description}</p>
+      <p className="text-gray-600 text-sm mb-3 flex-grow">
+        {lesson.description}
+      </p>
 
       {!lesson.isLocked && (
         <button
-          className={`w-full py-2 rounded-lg transition-colors ${
+          className={`w-full py-2 rounded-lg transition-colors mt-auto ${
             lesson.isCompleted
               ? "bg-blue-600 text-white hover:bg-blue-700"
               : "bg-emerald-600 text-white hover:bg-emerald-700"
