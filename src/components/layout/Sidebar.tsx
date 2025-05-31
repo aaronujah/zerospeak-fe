@@ -128,6 +128,66 @@ const navigationItems = [
   },
 ];
 
+const userContentItems = [
+  {
+    name: "History",
+    href: "/history",
+    icon: (
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    ),
+  },
+  {
+    name: "Liked",
+    href: "/liked",
+    icon: (
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+        />
+      </svg>
+    ),
+  },
+  {
+    name: "Bookmarked",
+    href: "/bookmarked",
+    icon: (
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+        />
+      </svg>
+    ),
+  },
+];
+
 const bottomNavigationItems = [
   {
     name: "Settings",
@@ -301,6 +361,36 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               );
             })}
           </nav>
+
+          {/* User content */}
+          <div className="px-4 py-4 border-t border-b border-slate-200 space-y-1">
+            {userContentItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={onClose}
+                  className={cn(
+                    "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                    isActive
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "mr-3",
+                      isActive ? "text-emerald-500" : "text-slate-400"
+                    )}
+                  >
+                    {item.icon}
+                  </span>
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
 
           {/* Bottom navigation */}
           <div className="px-4 py-4 border-t border-slate-200 space-y-1">
