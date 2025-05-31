@@ -214,23 +214,52 @@ export async function fetchFeedContent(
 ): Promise<ContentItem[]> {
   // Simulate API delay
   await new Promise((resolve) =>
-    setTimeout(resolve, 500 + Math.random() * 1000)
+    setTimeout(resolve, 500 + Math.random() * 500)
   );
 
   return generateMockContent(page, limit);
 }
 
+export async function fetchLikedContent(
+  page: number = 0,
+  limit: number = 10
+): Promise<ContentItem[]> {
+  // Simulate API delay
+  await new Promise((resolve) =>
+    setTimeout(resolve, 300 + Math.random() * 300)
+  );
+
+  // Generate more content to ensure we have enough liked items
+  const allContent = generateMockContent(0, 100);
+  const likedContent = allContent.filter((item) => item.isLiked);
+
+  // Paginate the liked content
+  const start = page * limit;
+  const end = start + limit;
+  return likedContent.slice(start, end);
+}
+
+export async function fetchBookmarkedContent(
+  page: number = 0,
+  limit: number = 10
+): Promise<ContentItem[]> {
+  // Simulate API delay
+  await new Promise((resolve) =>
+    setTimeout(resolve, 300 + Math.random() * 300)
+  );
+
+  // Generate more content to ensure we have enough bookmarked items
+  const allContent = generateMockContent(0, 100);
+  const bookmarkedContent = allContent.filter((item) => item.isBookmarked);
+
+  // Paginate the bookmarked content
+  const start = page * limit;
+  const end = start + limit;
+  return bookmarkedContent.slice(start, end);
+}
+
 export function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-
-  if (minutes >= 60) {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours}:${remainingMinutes
-      .toString()
-      .padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-  }
-
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
