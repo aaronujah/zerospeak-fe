@@ -2,6 +2,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { JWT } from "next-auth/jwt";
 import { Session, User } from "next-auth";
+import { authApi } from "./api";
 
 // Placeholder accounts for demo purposes
 const placeholderAccounts = [
@@ -48,25 +49,53 @@ export const authOptions = {
           return null;
         }
 
-        // Check placeholder accounts first
-        const user = placeholderAccounts.find(
-          (account) =>
-            account.email === credentials.email &&
-            account.password === credentials.password
-        );
+        try {
+          // Try to authenticate with backend first
+          const response = await authApi.login({
+            email: credentials.email,
+            password: credentials.password,
+          });
 
-        if (user) {
+          // Store the token for API calls
+          if (typeof window !== "undefined") {
+            localStorage.setItem("auth_token", response.token);
+            localStorage.setItem("refresh_token", response.refreshToken);
+          }
+
           return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            image: user.image,
-            hasCompletedOnboarding: user.hasCompletedOnboarding,
+            id: response.user.id,
+            email: response.user.email,
+            name: response.user.name,
+            image: response.user.image,
+            hasCompletedOnboarding: response.user.isOnboarded,
+            dailyGoal: response.user.dailyGoal,
           };
-        }
+        } catch (error) {
+          console.error(
+            "Backend authentication failed, trying placeholder accounts:",
+            error
+          );
 
-        // In a real app, you would validate against your backend here
-        return null;
+          // Fallback to placeholder accounts for demo purposes
+          const user = placeholderAccounts.find(
+            (account) =>
+              account.email === credentials.email &&
+              account.password === credentials.password
+          );
+
+          if (user) {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              image: user.image,
+              hasCompletedOnboarding: user.hasCompletedOnboarding,
+              dailyGoal: 30, // Default daily goal
+            };
+          }
+
+          return null;
+        }
       },
     }),
   ],
@@ -88,6 +117,7 @@ export const authOptions = {
       if (user) {
         token.id = user.id;
         token.hasCompletedOnboarding = user.hasCompletedOnboarding;
+        token.dailyGoal = user.dailyGoal;
       }
       return token;
     },
@@ -95,6 +125,7 @@ export const authOptions = {
       if (token && session.user) {
         session.user.id = token.id;
         session.user.hasCompletedOnboarding = token.hasCompletedOnboarding;
+        session.user.dailyGoal = token.dailyGoal;
       }
       return session;
     },

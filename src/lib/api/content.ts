@@ -1,0 +1,107 @@
+import { apiClient } from "./config";
+import { ContentItem } from "@/types/content";
+
+export interface CreateContentDto {
+  title: string;
+  description: string;
+  type: "video" | "audio" | "story" | "podcast";
+  level: "beginner" | "intermediate" | "advanced";
+  languageId: string;
+  duration: number;
+  url: string;
+  thumbnail: string;
+  audioUrl?: string;
+  subtitles?: Array<{
+    language: string;
+    url: string;
+  }>;
+  topics: string[];
+  isActive?: boolean;
+}
+
+export interface UpdateContentDto {
+  title?: string;
+  description?: string;
+  type?: "video" | "audio" | "story" | "podcast";
+  level?: "beginner" | "intermediate" | "advanced";
+  duration?: number;
+  url?: string;
+  thumbnail?: string;
+  audioUrl?: string;
+  subtitles?: Array<{
+    language: string;
+    url: string;
+  }>;
+  topics?: string[];
+  isActive?: boolean;
+}
+
+export const contentApi = {
+  // Content Management
+  getContent: async (
+    type?: string,
+    level?: string,
+    languageId?: string
+  ): Promise<ContentItem[]> => {
+    const params = new URLSearchParams();
+    if (type) params.append("type", type);
+    if (level) params.append("level", level);
+    if (languageId) params.append("languageId", languageId);
+
+    const queryString = params.toString();
+    const endpoint = `/content${queryString ? `?${queryString}` : ""}`;
+    return apiClient.get<ContentItem[]>(endpoint);
+  },
+
+  getContentItem: async (id: string): Promise<ContentItem> => {
+    return apiClient.get<ContentItem>(`/content/${id}`);
+  },
+
+  createContent: async (data: CreateContentDto): Promise<ContentItem> => {
+    return apiClient.post<ContentItem>("/content", data);
+  },
+
+  updateContent: async (
+    id: string,
+    data: UpdateContentDto
+  ): Promise<ContentItem> => {
+    return apiClient.put<ContentItem>(`/content/${id}`, data);
+  },
+
+  deleteContent: async (id: string): Promise<void> => {
+    return apiClient.delete<void>(`/content/${id}`);
+  },
+
+  // Content Interactions
+  likeContent: async (id: string): Promise<void> => {
+    return apiClient.post<void>(`/content/${id}/like`);
+  },
+
+  unlikeContent: async (id: string): Promise<void> => {
+    return apiClient.delete<void>(`/content/${id}/like`);
+  },
+
+  bookmarkContent: async (id: string): Promise<void> => {
+    return apiClient.post<void>(`/content/${id}/bookmark`);
+  },
+
+  unbookmarkContent: async (id: string): Promise<void> => {
+    return apiClient.delete<void>(`/content/${id}/bookmark`);
+  },
+
+  // Analytics
+  getContentAnalytics: async (
+    startDate?: string,
+    endDate?: string
+  ): Promise<any> => {
+    const params = new URLSearchParams();
+    if (startDate) params.append("start", startDate);
+    if (endDate) params.append("end", endDate);
+
+    const queryString = params.toString();
+    const endpoint = `/content/analytics${
+      queryString ? `?${queryString}` : ""
+    }`;
+    return apiClient.get<any>(endpoint);
+  },
+};

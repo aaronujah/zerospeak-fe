@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
-import { FlashCardDeck, FlashCardStats } from "@/types/flashcards";
+import { FlashCardDeck } from "@/types/flashcards";
 import {
-  fetchFlashCardDecks,
-  getFlashCardStats,
-  addDynamicDeck,
-} from "@/lib/mockFlashcards";
+  useFlashcardDecks,
+  useCreateFlashcardDeck,
+} from "@/hooks/useFlashcards";
 
 const DeckCard = ({ deck }: { deck: FlashCardDeck }) => {
   const router = useRouter();
@@ -30,7 +29,9 @@ const DeckCard = ({ deck }: { deck: FlashCardDeck }) => {
   };
 
   const getDueCards = () => {
-    return deck.newCards + deck.learningCards + deck.reviewCards;
+    return (
+      (deck.newCards || 0) + (deck.learningCards || 0) + (deck.reviewCards || 0)
+    );
   };
 
   return (
@@ -39,7 +40,7 @@ const DeckCard = ({ deck }: { deck: FlashCardDeck }) => {
         <div className="flex items-center space-x-3">
           <div className="text-3xl">{categoryIcons[deck.category]}</div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-slate-900">{deck.name}</h3>
+            <h3 className="font-semibold text-slate-900">{deck.title}</h3>
           </div>
         </div>
         <div className="flex items-center space-x-2 flex-shrink-0">
@@ -59,24 +60,26 @@ const DeckCard = ({ deck }: { deck: FlashCardDeck }) => {
       {/* Progress Stats */}
       <div className="grid grid-cols-4 gap-3 mb-4">
         <div className="text-center">
-          <div className="text-lg font-bold text-blue-600">{deck.newCards}</div>
+          <div className="text-lg font-bold text-blue-600">
+            {deck.newCards || 0}
+          </div>
           <div className="text-xs text-slate-500">New</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-bold text-orange-600">
-            {deck.learningCards}
+            {deck.learningCards || 0}
           </div>
           <div className="text-xs text-slate-500">Learning</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-bold text-yellow-600">
-            {deck.reviewCards}
+            {deck.reviewCards || 0}
           </div>
           <div className="text-xs text-slate-500">Review</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-bold text-emerald-600">
-            {deck.masteredCards}
+            {deck.masteredCards || 0}
           </div>
           <div className="text-xs text-slate-500">Mastered</div>
         </div>
@@ -88,7 +91,9 @@ const DeckCard = ({ deck }: { deck: FlashCardDeck }) => {
           <span>Progress</span>
           <span>
             {deck.totalCards > 0
-              ? `${Math.round((deck.masteredCards / deck.totalCards) * 100)}%`
+              ? `${Math.round(
+                  ((deck.masteredCards || 0) / deck.totalCards) * 100
+                )}%`
               : "0%"}
           </span>
         </div>
@@ -98,7 +103,7 @@ const DeckCard = ({ deck }: { deck: FlashCardDeck }) => {
             style={{
               width:
                 deck.totalCards > 0
-                  ? `${(deck.masteredCards / deck.totalCards) * 100}%`
+                  ? `${((deck.masteredCards || 0) / deck.totalCards) * 100}%`
                   : "0%",
             }}
           ></div>
@@ -182,46 +187,25 @@ const StatCard = ({
 );
 
 export default function FlashcardsPage() {
-  const [decks, setDecks] = useState<FlashCardDeck[]>([]);
-  const [stats, setStats] = useState<FlashCardStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Use API hooks
+  const { data: decks, loading, error, refetch } = useFlashcardDecks();
+  const { mutate: createDeck, loading: creating } = useCreateFlashcardDeck();
+
   // Form states for create deck
   const [createForm, setCreateForm] = useState({
-    name: "",
+    title: "",
     description: "",
-    category: "vocabulary" as
-      | "vocabulary"
-      | "grammar"
-      | "phrases"
-      | "culture"
-      | "custom",
+    languageId: "es", // Default to Spanish
+    difficultyLevel: 1,
+    tags: [] as string[],
   });
   const [formErrors, setFormErrors] = useState<{
-    name?: string;
-    category?: string;
+    title?: string;
+    languageId?: string;
   }>({});
-
-  useEffect(() => {
-    loadFlashcardData();
-  }, []);
-
-  const loadFlashcardData = async () => {
-    try {
-      const [fetchedDecks, fetchedStats] = await Promise.all([
-        fetchFlashCardDecks(),
-        getFlashCardStats(),
-      ]);
-      setDecks(fetchedDecks);
-      setStats(fetchedStats);
-    } catch (error) {
-      console.error("Failed to load flashcard data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleImportDeck = () => {
     setShowImportModal(true);
@@ -231,68 +215,66 @@ export default function FlashcardsPage() {
     setShowCreateModal(true);
     // Reset form when opening modal
     setCreateForm({
-      name: "",
+      title: "",
       description: "",
-      category: "vocabulary",
+      languageId: "es",
+      difficultyLevel: 1,
+      tags: [],
     });
     setFormErrors({});
   };
 
   const validateCreateForm = () => {
-    const errors: { name?: string; category?: string } = {};
+    const errors: { title?: string; languageId?: string } = {};
 
-    if (!createForm.name.trim()) {
-      errors.name = "Deck name is required";
+    if (!createForm.title.trim()) {
+      errors.title = "Deck title is required";
     }
 
-    if (!createForm.category) {
-      errors.category = "Category is required";
+    if (!createForm.languageId) {
+      errors.languageId = "Language is required";
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handleCreateSubmit = () => {
+  const handleCreateSubmit = async () => {
     if (!validateCreateForm()) {
       return;
     }
 
-    // Create new deck object
-    const newDeck: FlashCardDeck = {
-      id: `deck-${Date.now()}`, // Simple ID generation
-      name: createForm.name.trim(),
-      description: createForm.description.trim() || "No description provided",
-      category: createForm.category,
-      level: "mixed", // Default level since we removed it from UI
-      isDefault: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      totalCards: 0,
-      newCards: 0,
-      learningCards: 0,
-      reviewCards: 0,
-      masteredCards: 0,
-      cards: [],
-    };
+    try {
+      await createDeck({
+        title: createForm.title.trim(),
+        description: createForm.description.trim() || "No description provided",
+        languageId: createForm.languageId,
+        difficultyLevel: createForm.difficultyLevel,
+        tags: createForm.tags,
+      });
 
-    // Add to dynamic storage so it persists across page navigations
-    addDynamicDeck(newDeck);
+      // Close modal and reset form
+      setShowCreateModal(false);
+      setCreateForm({
+        title: "",
+        description: "",
+        languageId: "es",
+        difficultyLevel: 1,
+        tags: [],
+      });
+      setFormErrors({});
 
-    // Add to decks list
-    setDecks((prevDecks) => [newDeck, ...prevDecks]);
-
-    // Close modal and reset form
-    setShowCreateModal(false);
-    setCreateForm({
-      name: "",
-      description: "",
-      category: "vocabulary",
-    });
-    setFormErrors({});
+      // Refetch decks to show the new one
+      refetch();
+    } catch (error) {
+      console.error("Failed to create deck:", error);
+    }
   };
 
-  const handleFormChange = (field: keyof typeof createForm, value: string) => {
+  const handleFormChange = (
+    field: keyof typeof createForm,
+    value: string | number
+  ) => {
     setCreateForm((prev) => ({
       ...prev,
       [field]: value,
@@ -401,37 +383,18 @@ export default function FlashcardsPage() {
             </div>
           </div>
 
-          {/* Stats Overview */}
-          {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <StatCard
-                title="Total Cards"
-                value={stats.totalCards}
-                subtitle="Across all decks"
-                icon="🃏"
-                color="border-blue-200"
-              />
-              <StatCard
-                title="Cards Studied Today"
-                value={stats.cardsStudiedToday}
-                subtitle="Keep up the momentum!"
-                icon="⚡"
-                color="border-emerald-200"
-              />
-              <StatCard
-                title="Study Streak"
-                value={`${stats.studyStreak} days`}
-                subtitle="Current streak"
-                icon="🔥"
-                color="border-orange-200"
-              />
-              <StatCard
-                title="Average Accuracy"
-                value={`${stats.averageAccuracy}%`}
-                subtitle="Across all sessions"
-                icon="🎯"
-                color="border-purple-200"
-              />
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800">
+                Error loading flashcards: {error.message}
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="mt-2 text-red-600 hover:text-red-700 font-medium"
+              >
+                Try again
+              </button>
             </div>
           )}
 
@@ -440,7 +403,7 @@ export default function FlashcardsPage() {
             <h2 className="text-xl font-semibold text-slate-900 mb-6">
               Your Decks
             </h2>
-            {decks.length > 0 ? (
+            {decks && decks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {decks.map((deck) => (
                   <DeckCard key={deck.id} deck={deck} />
@@ -632,18 +595,20 @@ export default function FlashcardsPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Deck Name
+                      Deck Title
                     </label>
                     <input
                       type="text"
-                      placeholder="Enter deck name..."
+                      placeholder="Enter deck title..."
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
-                      value={createForm.name}
-                      onChange={(e) => handleFormChange("name", e.target.value)}
+                      value={createForm.title}
+                      onChange={(e) =>
+                        handleFormChange("title", e.target.value)
+                      }
                     />
-                    {formErrors.name && (
+                    {formErrors.title && (
                       <p className="text-red-500 text-xs mt-1">
-                        {formErrors.name}
+                        {formErrors.title}
                       </p>
                     )}
                   </div>
@@ -663,42 +628,59 @@ export default function FlashcardsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Category
+                      Language
                     </label>
                     <select
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
-                      value={createForm.category}
+                      value={createForm.languageId}
+                      onChange={(e) =>
+                        handleFormChange("languageId", e.target.value)
+                      }
+                    >
+                      <option value="es">🇪🇸 Spanish</option>
+                      <option value="fr">🇫🇷 French</option>
+                      <option value="de">🇩🇪 German</option>
+                      <option value="it">🇮🇹 Italian</option>
+                      <option value="pt">🇵🇹 Portuguese</option>
+                      <option value="ja">🇯🇵 Japanese</option>
+                      <option value="ko">🇰🇷 Korean</option>
+                      <option value="zh">🇨🇳 Chinese</option>
+                    </select>
+                    {formErrors.languageId && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {formErrors.languageId}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Difficulty Level
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
+                      value={createForm.difficultyLevel}
                       onChange={(e) =>
                         handleFormChange(
-                          "category",
-                          e.target.value as
-                            | "vocabulary"
-                            | "grammar"
-                            | "phrases"
-                            | "culture"
-                            | "custom"
+                          "difficultyLevel",
+                          parseInt(e.target.value)
                         )
                       }
                     >
-                      <option value="vocabulary">📚 Vocabulary</option>
-                      <option value="grammar">🔤 Grammar</option>
-                      <option value="phrases">💬 Phrases</option>
-                      <option value="culture">🎭 Culture</option>
-                      <option value="custom">⭐ Custom</option>
+                      <option value={1}>1 - Easy</option>
+                      <option value={2}>2 - Easy-Medium</option>
+                      <option value={3}>3 - Medium</option>
+                      <option value={4}>4 - Medium-Hard</option>
+                      <option value={5}>5 - Hard</option>
                     </select>
-                    {formErrors.category && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {formErrors.category}
-                      </p>
-                    )}
                   </div>
                   <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                     <button
                       type="button"
                       className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-emerald-600 text-base font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 sm:col-start-2 sm:text-sm"
                       onClick={handleCreateSubmit}
+                      disabled={creating}
                     >
-                      Create Deck
+                      {creating ? "Creating..." : "Create Deck"}
                     </button>
                     <button
                       type="button"
