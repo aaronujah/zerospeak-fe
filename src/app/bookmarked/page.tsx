@@ -5,7 +5,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import ContentCard from "@/components/feed/ContentCard";
 import { ContentSkeletonGrid } from "@/components/feed/ContentSkeleton";
 import { ContentItem } from "@/types/content";
-import { fetchBookmarkedContent } from "@/lib/mockData";
+import { contentApi } from "@/lib/api/content";
 
 export default function BookmarkedPage() {
   const [content, setContent] = useState<ContentItem[]>([]);
@@ -52,11 +52,16 @@ export default function BookmarkedPage() {
     setLoading(true);
 
     try {
-      const newItems = await fetchBookmarkedContent(pageNum, 12);
+      // For now, we'll get all content and filter for bookmarked items
+      // In a real implementation, the backend would have a bookmarked endpoint
+      const allContent = await contentApi.getContent();
+      const bookmarkedItems = allContent.filter((item) => item.isBookmarked);
 
-      setContent((prev) => (reset ? newItems : [...prev, ...newItems]));
+      setContent((prev) =>
+        reset ? bookmarkedItems : [...prev, ...bookmarkedItems]
+      );
       setLoading(false);
-      setHasMore(newItems.length === 12);
+      setHasMore(false); // For now, we'll show all bookmarked items at once
       setPage(pageNum);
     } catch (error) {
       console.error("Error loading bookmarked content:", error);

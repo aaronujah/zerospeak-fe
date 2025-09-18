@@ -3,8 +3,17 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import AppLayout from "@/components/layout/AppLayout";
+import AuthGuard from "@/components/auth/AuthGuard";
+import AuthLoading from "@/components/auth/AuthLoading";
 import { Button } from "@/components/ui/Button";
 import { useUserLanguage, availableLanguages } from "@/lib/userLanguageContext";
+import {
+  useCurrentUser,
+  useUpdateUser,
+  useUserLanguages,
+  useAddUserLanguage,
+  useRemoveUserLanguage,
+} from "@/hooks/useUsers";
 
 interface SettingsState {
   profile: {
@@ -24,19 +33,30 @@ interface SettingsState {
   };
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
   const { data: session } = useSession();
   const { userLanguages, setUserLanguages } = useUserLanguage();
   const [activeTab, setActiveTab] = useState("profile");
+
+  // Use API hooks for live data
+  const { data: user, loading: userLoading } = useCurrentUser();
+  const { data: userLanguagesData, loading: languagesLoading } =
+    useUserLanguages();
+  const { mutate: updateUser, loading: updating } = useUpdateUser();
+  const { mutate: addUserLanguage, loading: addingLanguage } =
+    useAddUserLanguage();
+  const { mutate: removeUserLanguage, loading: removingLanguage } =
+    useRemoveUserLanguage();
+
   const [settings, setSettings] = useState<SettingsState>({
     profile: {
-      name: session?.user?.name || "",
-      email: session?.user?.email || "",
-      bio: "",
+      name: user?.name || session?.user?.name || "",
+      email: user?.email || session?.user?.email || "",
+      bio: user?.bio || "",
     },
     learning: {
       level: "intermediate",
-      dailyGoal: 15,
+      dailyGoal: user?.dailyGoal || 15,
       autoplay: true,
       subtitles: true,
     },
@@ -79,12 +99,21 @@ export default function SettingsPage() {
     }
   };
 
-  const confirmAddLanguage = () => {
-    if (languageToAdd) {
-      const newLanguages = [...userLanguages, languageToAdd];
-      setUserLanguages(newLanguages);
-      setShowAddConfirm(false);
-      setLanguageToAdd(null);
+  const confirmAddLanguage = async () => {
+    if (languageToAdd && user?.id) {
+      try {
+        await addUserLanguage({
+          languageId: languageToAdd,
+          proficiencyLevel: "beginner",
+          isPrimary: false,
+        });
+        const newLanguages = [...userLanguages, languageToAdd];
+        setUserLanguages(newLanguages);
+        setShowAddConfirm(false);
+        setLanguageToAdd(null);
+      } catch (error) {
+        console.error("Failed to add language:", error);
+      }
     }
   };
 
@@ -93,14 +122,19 @@ export default function SettingsPage() {
     setShowRemoveConfirm(true);
   };
 
-  const confirmRemoveLanguage = () => {
-    if (languageToRemove) {
-      const newLanguages = userLanguages.filter(
-        (lang) => lang !== languageToRemove
-      );
-      setUserLanguages(newLanguages);
-      setShowRemoveConfirm(false);
-      setLanguageToRemove(null);
+  const confirmRemoveLanguage = async () => {
+    if (languageToRemove && user?.id) {
+      try {
+        await removeUserLanguage(user.id, languageToRemove);
+        const newLanguages = userLanguages.filter(
+          (lang) => lang !== languageToRemove
+        );
+        setUserLanguages(newLanguages);
+        setShowRemoveConfirm(false);
+        setLanguageToRemove(null);
+      } catch (error) {
+        console.error("Failed to remove language:", error);
+      }
     }
   };
 
@@ -112,12 +146,21 @@ export default function SettingsPage() {
   };
 
   const handleSave = async () => {
+    if (!user?.id) return;
+
     setIsSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    // In a real app, you would save to backend here
-    console.log("Settings saved:", settings);
+    try {
+      await updateUser({
+        name: settings.profile.name,
+        email: settings.profile.email,
+        dailyGoal: settings.learning.dailyGoal,
+      });
+      console.log("Settings saved:", settings);
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const renderTabContent = () => {
@@ -437,10 +480,10 @@ export default function SettingsPage() {
                 <div className="mt-8 pt-6 border-t border-slate-200">
                   <Button
                     onClick={handleSave}
-                    disabled={isSaving}
+                    disabled={isSaving || updating}
                     className="w-full sm:w-auto"
                   >
-                    {isSaving ? "Saving..." : "Save Changes"}
+                    {isSaving || updating ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               </div>
@@ -466,13 +509,18 @@ export default function SettingsPage() {
               content in your feed and lessons.
             </p>
             <div className="flex space-x-3">
-              <Button onClick={confirmAddLanguage} className="flex-1">
-                Add Language
+              <Button
+                onClick={confirmAddLanguage}
+                className="flex-1"
+                disabled={addingLanguage}
+              >
+                {addingLanguage ? "Adding..." : "Add Language"}
               </Button>
               <Button
                 onClick={cancelLanguageAction}
                 variant="outline"
                 className="flex-1"
+                disabled={addingLanguage}
               >
                 Cancel
               </Button>
@@ -516,10 +564,15 @@ export default function SettingsPage() {
                 onClick={confirmRemoveLanguage}
                 variant="outline"
                 className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
+                disabled={removingLanguage}
               >
-                Remove Language
+                {removingLanguage ? "Removing..." : "Remove Language"}
               </Button>
-              <Button onClick={cancelLanguageAction} className="flex-1">
+              <Button
+                onClick={cancelLanguageAction}
+                className="flex-1"
+                disabled={removingLanguage}
+              >
                 Keep Language
               </Button>
             </div>
@@ -527,5 +580,13 @@ export default function SettingsPage() {
         </div>
       )}
     </AppLayout>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <AuthGuard fallback={<AuthLoading />}>
+      <SettingsContent />
+    </AuthGuard>
   );
 }

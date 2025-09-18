@@ -25,11 +25,11 @@ export interface LanguageAnalytics {
 export const languagesApi = {
   // Languages
   getLanguages: async (): Promise<Language[]> => {
-    return apiClient.get<Language[]>("/languages");
+    return apiClient.get<Language[]>("/v1/languages");
   },
 
   getLanguage: async (id: string): Promise<Language> => {
-    return apiClient.get<Language>(`/languages/${id}`);
+    return apiClient.get<Language>(`/v1/languages/${id}`);
   },
 
   // Analytics
@@ -38,11 +38,11 @@ export const languagesApi = {
     endDate?: string
   ): Promise<LanguageAnalytics> => {
     const params = new URLSearchParams();
-    if (startDate) params.append("start", startDate);
-    if (endDate) params.append("end", endDate);
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
 
     const queryString = params.toString();
-    const endpoint = `/languages/analytics${
+    const endpoint = `/v1/languages/analytics${
       queryString ? `?${queryString}` : ""
     }`;
     return apiClient.get<LanguageAnalytics>(endpoint);

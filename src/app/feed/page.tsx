@@ -6,160 +6,87 @@ import ContentCard from "@/components/feed/ContentCard";
 import SearchAndFilters from "@/components/feed/SearchAndFilters";
 import { ContentSkeletonGrid } from "@/components/feed/ContentSkeleton";
 import { ContentItem, FeedState } from "@/types/content";
-import { fetchFeedContent } from "@/lib/mockData";
+import { useContent } from "@/hooks/useContent";
 
 export default function FeedPage() {
-  const [feedState, setFeedState] = useState<FeedState>({
-    items: [],
-    loading: true,
-    hasMore: true,
-    page: 0,
-    filters: {},
-  });
-
-  const [filteredItems, setFilteredItems] = useState<ContentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadingRef = useRef<HTMLDivElement>(null);
+  const [filters, setFilters] = useState<{
+    type?: string;
+    level?: string;
+    topics?: string[];
+  }>({});
 
-  // Load initial content
-  useEffect(() => {
-    loadContent(0, true);
-  }, []);
+  // Use API hooks for live data
+  const {
+    data: content,
+    loading,
+    error,
+    refetch,
+  } = useContent(
+    filters.type,
+    filters.level,
+    "es" // Default to Spanish
+  );
 
   // Filter and search content when filters or search query change
-  useEffect(() => {
-    const filtered = feedState.items.filter((item) => {
-      // Search filter
-      if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase();
-        const matchesSearch =
-          item.title.toLowerCase().includes(searchLower) ||
-          item.description.toLowerCase().includes(searchLower) ||
-          item.creator.name.toLowerCase().includes(searchLower) ||
-          item.topics.some((topic) =>
-            topic.toLowerCase().includes(searchLower)
-          );
+  const filteredItems = (content || []).filter((item) => {
+    // Search filter
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch =
+        item.title.toLowerCase().includes(searchLower) ||
+        item.description.toLowerCase().includes(searchLower) ||
+        item.tags.some((tag) => tag.toLowerCase().includes(searchLower));
 
-        if (!matchesSearch) return false;
-      }
-
-      // Type filter
-      if (feedState.filters.type && item.type !== feedState.filters.type) {
-        return false;
-      }
-
-      // Level filter
-      if (feedState.filters.level && item.level !== feedState.filters.level) {
-        return false;
-      }
-
-      // Topics filter
-      if (feedState.filters.topics && feedState.filters.topics.length > 0) {
-        const hasMatchingTopic = feedState.filters.topics.some((topic) =>
-          item.topics.includes(topic)
-        );
-        if (!hasMatchingTopic) return false;
-      }
-
-      return true;
-    });
-    setFilteredItems(filtered);
-  }, [feedState.items, feedState.filters, searchQuery]);
-
-  // Set up intersection observer for infinite scroll
-  useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
+      if (!matchesSearch) return false;
     }
 
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          feedState.hasMore &&
-          !feedState.loading
-        ) {
-          loadContent(feedState.page + 1);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadingRef.current) {
-      observerRef.current.observe(loadingRef.current);
+    // Type filter
+    if (filters.type && item.type !== filters.type) {
+      return false;
     }
 
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [feedState.hasMore, feedState.loading, feedState.page]);
-
-  const loadContent = async (page: number, reset = false) => {
-    if (feedState.loading && !reset) return;
-
-    setFeedState((prev) => ({ ...prev, loading: true }));
-
-    try {
-      const newItems = await fetchFeedContent(page, 12);
-
-      setFeedState((prev) => ({
-        ...prev,
-        items: reset ? newItems : [...prev.items, ...newItems],
-        loading: false,
-        hasMore: newItems.length === 12, // If we get less than 12, we've reached the end
-        page,
-      }));
-    } catch (error) {
-      console.error("Error loading content:", error);
-      setFeedState((prev) => ({ ...prev, loading: false }));
+    // Level filter
+    if (filters.level && item.level !== filters.level) {
+      return false;
     }
-  };
 
-  const handleFiltersChange = useCallback(
-    (newFilters: typeof feedState.filters) => {
-      setFeedState((prev) => ({ ...prev, filters: newFilters }));
-    },
-    []
-  );
+    // Topics filter
+    if (filters.topics && filters.topics.length > 0) {
+      const hasMatchingTopic = filters.topics.some((topic) =>
+        item.tags.includes(topic)
+      );
+      if (!hasMatchingTopic) return false;
+    }
+
+    return true;
+  });
+
+  // No need for intersection observer or loadContent since we're using API hooks
+
+  const handleFiltersChange = useCallback((newFilters: typeof filters) => {
+    setFilters(newFilters);
+  }, []);
 
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
   }, []);
 
   const handleLike = useCallback((contentId: string) => {
-    setFeedState((prev) => ({
-      ...prev,
-      items: prev.items.map((item) =>
-        item.id === contentId
-          ? {
-              ...item,
-              isLiked: !item.isLiked,
-              likes: item.isLiked ? item.likes - 1 : item.likes + 1,
-            }
-          : item
-      ),
-    }));
+    // TODO: Implement like functionality with API
+    console.log("Like content:", contentId);
   }, []);
 
   const handleBookmark = useCallback((contentId: string) => {
-    setFeedState((prev) => ({
-      ...prev,
-      items: prev.items.map((item) =>
-        item.id === contentId
-          ? { ...item, isBookmarked: !item.isBookmarked }
-          : item
-      ),
-    }));
+    // TODO: Implement bookmark functionality with API
+    console.log("Bookmark content:", contentId);
   }, []);
 
   const hasActiveFilters =
     searchQuery ||
-    feedState.filters.type ||
-    feedState.filters.level ||
-    (feedState.filters.topics && feedState.filters.topics.length > 0);
+    filters.type ||
+    filters.level ||
+    (filters.topics && filters.topics.length > 0);
 
   return (
     <AppLayout>
@@ -167,14 +94,29 @@ export default function FeedPage() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Search and Filters */}
           <SearchAndFilters
-            filters={feedState.filters}
+            filters={filters}
             searchQuery={searchQuery}
             onFiltersChange={handleFiltersChange}
             onSearchChange={handleSearchChange}
           />
 
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800">
+                Error loading content: {error.message}
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="mt-2 text-red-600 hover:text-red-700 font-medium"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
           {/* Content Grid */}
-          {feedState.items.length === 0 && feedState.loading ? (
+          {loading ? (
             <ContentSkeletonGrid count={12} />
           ) : (
             <>
@@ -221,23 +163,6 @@ export default function FeedPage() {
                       onBookmark={handleBookmark}
                     />
                   ))}
-                </div>
-              )}
-
-              {/* Loading indicator for infinite scroll */}
-              {feedState.hasMore && (
-                <div ref={loadingRef} className="mt-8">
-                  {feedState.loading && <ContentSkeletonGrid count={6} />}
-                </div>
-              )}
-
-              {/* End of content message */}
-              {!feedState.hasMore && feedState.items.length > 0 && (
-                <div className="text-center py-8">
-                  <p className="text-slate-500">
-                    You&apos;ve reached the end! Check back later for new
-                    content.
-                  </p>
                 </div>
               )}
             </>

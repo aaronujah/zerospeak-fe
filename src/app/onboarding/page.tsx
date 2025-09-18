@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/Input";
 
 interface OnboardingData {
   targetLanguage: string;
-  currentLevel: string;
+  currentLevel: "beginner" | "intermediate" | "advanced";
   dailyGoal: number;
   interests: string[];
   learningStyle: string;
@@ -48,14 +48,14 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<OnboardingData>({
     targetLanguage: "",
-    currentLevel: "",
+    currentLevel: "beginner",
     dailyGoal: 15,
     interests: [],
-    learningStyle: "",
+    learningStyle: "visual",
     motivation: "",
   });
 
-  const totalSteps = 6;
+  const totalSteps = 7;
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -72,14 +72,35 @@ export default function OnboardingPage() {
   const handleComplete = async () => {
     setIsLoading(true);
 
-    // Simulate saving onboarding data
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // Send onboarding data to backend
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/v1/users/complete-onboarding`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+          body: JSON.stringify(data),
+        }
+      );
 
-    // In a real app, you'd save this to your backend
-    console.log("Onboarding data:", data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to complete onboarding:", errorData);
+        // Still redirect to completion page even if backend call fails
+      }
 
-    // Redirect to completion page
-    router.push("/onboarding/complete");
+      // Redirect to completion page
+      router.push("/onboarding/complete");
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      // Still redirect to completion page even if there's an error
+      router.push("/onboarding/complete");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateData = (
@@ -109,8 +130,10 @@ export default function OnboardingPage() {
       case 4:
         return <InterestsStep data={data} toggleInterest={toggleInterest} />;
       case 5:
-        return <GoalStep data={data} updateData={updateData} />;
+        return <LearningStyleStep data={data} updateData={updateData} />;
       case 6:
+        return <GoalStep data={data} updateData={updateData} />;
+      case 7:
         return <MotivationStep data={data} updateData={updateData} />;
       default:
         return <WelcomeStep />;
@@ -128,8 +151,10 @@ export default function OnboardingPage() {
       case 4:
         return data.interests.length > 0;
       case 5:
-        return data.dailyGoal > 0;
+        return data.learningStyle !== "";
       case 6:
+        return data.dailyGoal > 0;
+      case 7:
         return data.motivation.trim() !== "";
       default:
         return false;
@@ -322,16 +347,10 @@ function LevelStep({
 }) {
   const levels = [
     {
-      id: "absolute-beginner",
-      name: "Absolute Beginner",
-      description: "I know little to no words in this language",
-      icon: "🌱",
-    },
-    {
       id: "beginner",
       name: "Beginner",
-      description: "I know some basic words and phrases",
-      icon: "🌿",
+      description: "I know little to no words in this language",
+      icon: "🌱",
     },
     {
       id: "intermediate",
@@ -498,6 +517,87 @@ function GoalStep({
             big results
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function LearningStyleStep({
+  data,
+  updateData,
+}: {
+  data: OnboardingData;
+  updateData: Function;
+}) {
+  const learningStyles = [
+    {
+      id: "visual",
+      name: "Visual",
+      description: "I learn best with images, videos, and visual cues",
+      icon: "👁️",
+    },
+    {
+      id: "auditory",
+      name: "Auditory",
+      description: "I learn best by listening and hearing",
+      icon: "👂",
+    },
+    {
+      id: "kinesthetic",
+      name: "Kinesthetic",
+      description: "I learn best through movement and hands-on activities",
+      icon: "🤲",
+    },
+    {
+      id: "reading-writing",
+      name: "Reading/Writing",
+      description: "I learn best through text and written materials",
+      icon: "📝",
+    },
+  ];
+
+  return (
+    <div>
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-slate-900 mb-4">
+          How do you learn best?
+        </h2>
+        <p className="text-slate-600">
+          Choose your preferred learning style to help us personalize your
+          content experience.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {learningStyles.map((style) => (
+          <button
+            key={style.id}
+            onClick={() => updateData("learningStyle", style.id)}
+            className={`w-full p-6 rounded-xl border-2 text-left transition-all hover:scale-[1.02] ${
+              data.learningStyle === style.id
+                ? "border-emerald-500 bg-emerald-50"
+                : "border-slate-200 bg-white hover:border-slate-300"
+            }`}
+          >
+            <div className="flex items-start space-x-4">
+              <span className="text-3xl">{style.icon}</span>
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-1">
+                  {style.name}
+                </h3>
+                <p className="text-slate-600">{style.description}</p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-8 p-4 bg-emerald-50 rounded-xl">
+        <p className="text-sm text-emerald-800">
+          <strong>Note:</strong> We'll use this to optimize your content, but
+          you'll still get a variety of learning materials to keep things
+          engaging!
+        </p>
       </div>
     </div>
   );

@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ContentItem } from "@/types/content";
-import { formatDuration } from "@/lib/mockData";
+// Utility function for formatting duration
+const formatDuration = (seconds: number): string => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+};
 
 interface ContentCardProps {
   content: ContentItem;

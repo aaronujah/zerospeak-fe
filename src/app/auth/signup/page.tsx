@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 export default function SignUpPage() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,40 +29,55 @@ export default function SignUpPage() {
     }
 
     try {
-      // For demo purposes, simulate successful registration
-      // In a real app, this would call your backend API
+      // Call the backend API to register the user
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/v1/signup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstName,
+            lastName,
+            email,
+            password,
+            passwordConfirmation: confirmPassword,
+          }),
+        }
+      );
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Check if email already exists in our test accounts
-      const testEmails = [
-        "test@zerospeak.com",
-        "demo@zerospeak.com",
-        "admin@zerospeak.com",
-      ];
-      if (testEmails.includes(email)) {
-        setError(
-          "An account with this email already exists. Please try signing in."
-        );
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.message || "Registration failed. Please try again.");
         return;
       }
 
-      // For demo, we'll just sign them in with a temporary account
-      // In production, this would create a new user in the backend
+      const responseData = await response.json();
+
+      // Store the token for API calls
+      if (typeof window !== "undefined") {
+        localStorage.setItem("auth_token", responseData.token);
+      }
+
+      // Registration successful, now sign in
       const result = await signIn("credentials", {
-        email: "demo@zerospeak.com", // Use demo account for new registrations
-        password: "demo123",
+        email,
+        password,
         redirect: false,
       });
 
       if (result?.error) {
-        setError("Registration failed. Please try again.");
-      } else {
-        router.push("/onboarding");
+        setError(
+          "Registration successful but sign in failed. Please try signing in manually."
+        );
+        return;
       }
-    } catch {
-      setError("Something went wrong. Please try again.");
+
+      // Redirect to onboarding
+      router.push("/onboarding");
+    } catch (error) {
+      setError("Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -149,14 +165,24 @@ export default function SignUpPage() {
 
           {/* Email Form */}
           <form onSubmit={handleEmailSignUp} className="space-y-4">
-            <Input
-              label="Full Name"
-              type="text"
-              placeholder="Enter your full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="First Name"
+                type="text"
+                placeholder="Enter your first name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+              />
+              <Input
+                label="Last Name"
+                type="text"
+                placeholder="Enter your last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+              />
+            </div>
 
             <Input
               label="Email"

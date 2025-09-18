@@ -50,18 +50,13 @@ export function shouldRedirectToDashboard(
   return currentPath.startsWith("/onboarding");
 }
 
-// Function to mark onboarding as complete (for demo purposes)
+// Function to mark onboarding as complete
 export async function markOnboardingComplete(userId: string): Promise<void> {
-  // In a real app, this would update the user's onboarding status in the database
-  // For now, we'll just log it
-  console.log(`Marking onboarding complete for user: ${userId}`);
-
   // Mark in localStorage for immediate effect
   if (typeof window !== "undefined") {
     localStorage.setItem("onboardingComplete", "true");
     localStorage.setItem("onboardingCompletedAt", new Date().toISOString());
   }
 
-  // In the demo, we'll update the session by forcing a page reload
   // In production, you'd update the database and refresh the session
 }

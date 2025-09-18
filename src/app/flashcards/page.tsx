@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
+import AuthGuard from "@/components/auth/AuthGuard";
+import AuthLoading from "@/components/auth/AuthLoading";
 import { FlashCardDeck } from "@/types/flashcards";
 import {
   useFlashcardDecks,
@@ -186,7 +188,7 @@ const StatCard = ({
   </div>
 );
 
-export default function FlashcardsPage() {
+function FlashcardsContent() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -697,5 +699,13 @@ export default function FlashcardsPage() {
         </div>
       )}
     </AppLayout>
+  );
+}
+
+export default function FlashcardsPage() {
+  return (
+    <AuthGuard fallback={<AuthLoading />}>
+      <FlashcardsContent />
+    </AuthGuard>
   );
 }

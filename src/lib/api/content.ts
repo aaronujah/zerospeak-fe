@@ -49,44 +49,56 @@ export const contentApi = {
     if (languageId) params.append("languageId", languageId);
 
     const queryString = params.toString();
-    const endpoint = `/content${queryString ? `?${queryString}` : ""}`;
+    const endpoint = `/v1/content${queryString ? `?${queryString}` : ""}`;
     return apiClient.get<ContentItem[]>(endpoint);
   },
 
   getContentItem: async (id: string): Promise<ContentItem> => {
-    return apiClient.get<ContentItem>(`/content/${id}`);
+    return apiClient.get<ContentItem>(`/v1/content/${id}`);
   },
 
   createContent: async (data: CreateContentDto): Promise<ContentItem> => {
-    return apiClient.post<ContentItem>("/content", data);
+    return apiClient.post<ContentItem>("/v1/content", data);
   },
 
   updateContent: async (
     id: string,
     data: UpdateContentDto
   ): Promise<ContentItem> => {
-    return apiClient.put<ContentItem>(`/content/${id}`, data);
+    return apiClient.put<ContentItem>(`/v1/content/${id}`, data);
   },
 
   deleteContent: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/content/${id}`);
+    return apiClient.delete<void>(`/v1/content/${id}`);
   },
 
   // Content Interactions
   likeContent: async (id: string): Promise<void> => {
-    return apiClient.post<void>(`/content/${id}/like`);
+    return apiClient.post<void>("/v1/interactions/content", {
+      contentId: id,
+      actionType: "like",
+    });
   },
 
   unlikeContent: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/content/${id}/like`);
+    return apiClient.post<void>("/v1/interactions/content", {
+      contentId: id,
+      actionType: "unlike",
+    });
   },
 
   bookmarkContent: async (id: string): Promise<void> => {
-    return apiClient.post<void>(`/content/${id}/bookmark`);
+    return apiClient.post<void>("/v1/interactions/content", {
+      contentId: id,
+      actionType: "bookmark",
+    });
   },
 
   unbookmarkContent: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/content/${id}/bookmark`);
+    return apiClient.post<void>("/v1/interactions/content", {
+      contentId: id,
+      actionType: "unbookmark",
+    });
   },
 
   // Analytics
@@ -95,11 +107,11 @@ export const contentApi = {
     endDate?: string
   ): Promise<any> => {
     const params = new URLSearchParams();
-    if (startDate) params.append("start", startDate);
-    if (endDate) params.append("end", endDate);
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
 
     const queryString = params.toString();
-    const endpoint = `/content/analytics${
+    const endpoint = `/v1/content/analytics${
       queryString ? `?${queryString}` : ""
     }`;
     return apiClient.get<any>(endpoint);

@@ -62,43 +62,43 @@ export interface Achievement {
 export const usersApi = {
   // User Management
   getCurrentUser: async (): Promise<User> => {
-    return apiClient.get<User>("/users/me");
+    return apiClient.get<User>("/v1/users/profile");
   },
 
   updateUser: async (data: Partial<User>): Promise<User> => {
-    return apiClient.put<User>("/users/me", data);
+    return apiClient.put<User>("/v1/users/profile", data);
   },
 
   deleteUser: async (): Promise<void> => {
-    return apiClient.delete<void>("/users/me");
+    return apiClient.delete<void>("/v1/users/profile");
   },
 
   // Onboarding
   completeOnboarding: async (data: CompleteOnboardingDto): Promise<User> => {
-    return apiClient.post<User>("/users/onboarding", data);
+    return apiClient.post<User>("/v1/users/onboarding/complete", data);
   },
 
   // User Languages
   getUserLanguages: async (): Promise<UserLanguage[]> => {
-    return apiClient.get<UserLanguage[]>("/users/languages");
+    return apiClient.get<UserLanguage[]>("/v1/users/languages");
   },
 
   addUserLanguage: async (data: AddUserLanguageDto): Promise<UserLanguage> => {
-    return apiClient.post<UserLanguage>("/users/languages", data);
+    return apiClient.post<UserLanguage>("/v1/users/languages", data);
   },
 
   removeUserLanguage: async (languageId: string): Promise<void> => {
-    return apiClient.delete<void>(`/users/languages/${languageId}`);
+    return apiClient.delete<void>(`/v1/users/languages/${languageId}`);
   },
 
   // User Activities
   getUserActivities: async (): Promise<UserActivity[]> => {
-    return apiClient.get<UserActivity[]>("/users/activities");
+    return apiClient.get<UserActivity[]>("/v1/users/activities");
   },
 
   // Achievements
   getUserAchievements: async (): Promise<Achievement[]> => {
-    return apiClient.get<Achievement[]>("/users/achievements");
+    return apiClient.get<Achievement[]>("/v1/users/achievements");
   },
 
   // Analytics
@@ -111,7 +111,7 @@ export const usersApi = {
     if (endDate) params.append("end", endDate);
 
     const queryString = params.toString();
-    const endpoint = `/users/analytics${queryString ? `?${queryString}` : ""}`;
+    const endpoint = `/v1/users/stats${queryString ? `?${queryString}` : ""}`;
     return apiClient.get<any>(endpoint);
   },
 };

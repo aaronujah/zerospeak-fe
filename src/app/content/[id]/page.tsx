@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import { ContentItem } from "@/types/content";
-import { fetchFeedContent } from "@/lib/mockData";
+import { contentApi } from "@/lib/api/content";
 
 export default function ContentPage() {
   const params = useParams();
@@ -29,9 +29,10 @@ export default function ContentPage() {
   useEffect(() => {
     const loadContent = async () => {
       try {
-        // In a real app, you'd fetch by ID. For now, we'll get from the feed and find by ID
-        const allContent = await fetchFeedContent(0, 100); // Load more content for recommendations
-        const foundContent = allContent.find((item) => item.id === params.id);
+        // Fetch the specific content item by ID
+        const foundContent = await contentApi.getContentItem(
+          params.id as string
+        );
 
         if (foundContent) {
           setContent(foundContent);
@@ -39,7 +40,8 @@ export default function ContentPage() {
           setIsSaved(foundContent.isBookmarked);
           setLikeCount(foundContent.likes);
 
-          // Store all content for recommendations
+          // Get all content for recommendations
+          const allContent = await contentApi.getContent();
           const filteredContent = allContent.filter(
             (item) => item.id !== foundContent.id
           );

@@ -36,28 +36,28 @@ export const journalApi = {
   // Journal Entries
   getEntries: async (languageId?: string): Promise<JournalEntry[]> => {
     const endpoint = languageId
-      ? `/journal/entries?languageId=${languageId}`
-      : "/journal/entries";
+      ? `/v1/journal-entries?languageId=${languageId}`
+      : "/v1/journal-entries";
     return apiClient.get<JournalEntry[]>(endpoint);
   },
 
   getEntry: async (id: string): Promise<JournalEntry> => {
-    return apiClient.get<JournalEntry>(`/journal/entries/${id}`);
+    return apiClient.get<JournalEntry>(`/v1/journal-entries/${id}`);
   },
 
   createEntry: async (data: CreateJournalEntryDto): Promise<JournalEntry> => {
-    return apiClient.post<JournalEntry>("/journal/entries", data);
+    return apiClient.post<JournalEntry>("/v1/journal-entries", data);
   },
 
   updateEntry: async (
     id: string,
     data: UpdateJournalEntryDto
   ): Promise<JournalEntry> => {
-    return apiClient.put<JournalEntry>(`/journal/entries/${id}`, data);
+    return apiClient.put<JournalEntry>(`/v1/journal-entries/${id}`, data);
   },
 
   deleteEntry: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/journal/entries/${id}`);
+    return apiClient.delete<void>(`/v1/journal-entries/${id}`);
   },
 
   // Journal Prompts
@@ -70,29 +70,31 @@ export const journalApi = {
     if (difficulty) params.append("difficulty", difficulty);
 
     const queryString = params.toString();
-    const endpoint = `/journal/prompts${queryString ? `?${queryString}` : ""}`;
+    const endpoint = `/v1/journal-prompts${
+      queryString ? `?${queryString}` : ""
+    }`;
     return apiClient.get<JournalPrompt[]>(endpoint);
   },
 
   getPrompt: async (id: string): Promise<JournalPrompt> => {
-    return apiClient.get<JournalPrompt>(`/journal/prompts/${id}`);
+    return apiClient.get<JournalPrompt>(`/v1/journal-prompts/${id}`);
   },
 
   createPrompt: async (
     data: CreateJournalPromptDto
   ): Promise<JournalPrompt> => {
-    return apiClient.post<JournalPrompt>("/journal/prompts", data);
+    return apiClient.post<JournalPrompt>("/v1/journal-prompts", data);
   },
 
   updatePrompt: async (
     id: string,
     data: UpdateJournalPromptDto
   ): Promise<JournalPrompt> => {
-    return apiClient.put<JournalPrompt>(`/journal/prompts/${id}`, data);
+    return apiClient.put<JournalPrompt>(`/v1/journal-prompts/${id}`, data);
   },
 
   deletePrompt: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/journal/prompts/${id}`);
+    return apiClient.delete<void>(`/v1/journal-prompts/${id}`);
   },
 
   // Analytics
@@ -105,7 +107,7 @@ export const journalApi = {
     if (endDate) params.append("end", endDate);
 
     const queryString = params.toString();
-    const endpoint = `/journal/analytics${
+    const endpoint = `/v1/journal-entries/analytics${
       queryString ? `?${queryString}` : ""
     }`;
     return apiClient.get<any>(endpoint);

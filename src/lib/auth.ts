@@ -4,39 +4,13 @@ import { JWT } from "next-auth/jwt";
 import { Session, User } from "next-auth";
 import { authApi } from "./api";
 
-// Placeholder accounts for demo purposes
-const placeholderAccounts = [
-  {
-    id: "1",
-    email: "test@zerospeak.com",
-    password: "password123",
-    name: "Test User",
-    image: null,
-    hasCompletedOnboarding: true, // This user has completed onboarding
-  },
-  {
-    id: "2",
-    email: "demo@zerospeak.com",
-    password: "demo123",
-    name: "Demo Learner",
-    image: null,
-    hasCompletedOnboarding: false, // This user needs onboarding
-  },
-  {
-    id: "3",
-    email: "admin@zerospeak.com",
-    password: "admin123",
-    name: "Admin User",
-    image: null,
-    hasCompletedOnboarding: true, // This user has completed onboarding
-  },
-];
+// No placeholder accounts - all authentication goes through backend API
 
 export const authOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "dummy-client-id",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "dummy-client-secret",
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
     CredentialsProvider({
       name: "credentials",
@@ -50,7 +24,7 @@ export const authOptions = {
         }
 
         try {
-          // Try to authenticate with backend first
+          // Authenticate with backend API
           const response = await authApi.login({
             email: credentials.email,
             password: credentials.password,
@@ -59,41 +33,19 @@ export const authOptions = {
           // Store the token for API calls
           if (typeof window !== "undefined") {
             localStorage.setItem("auth_token", response.token);
-            localStorage.setItem("refresh_token", response.refreshToken);
+            // Note: Backend doesn't return refresh token yet
           }
 
           return {
-            id: response.user.id,
-            email: response.user.email,
-            name: response.user.name,
-            image: response.user.image,
-            hasCompletedOnboarding: response.user.isOnboarded,
-            dailyGoal: response.user.dailyGoal,
+            id: response.id,
+            email: response.email,
+            name: `${response.firstName} ${response.lastName}`,
+            image: response.imageUrl,
+            hasCompletedOnboarding: response.hasCompletedOnboarding,
+            dailyGoal: response.dailyGoal,
+            backendToken: response.token, // Include the backend JWT token
           };
         } catch (error) {
-          console.error(
-            "Backend authentication failed, trying placeholder accounts:",
-            error
-          );
-
-          // Fallback to placeholder accounts for demo purposes
-          const user = placeholderAccounts.find(
-            (account) =>
-              account.email === credentials.email &&
-              account.password === credentials.password
-          );
-
-          if (user) {
-            return {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-              image: user.image,
-              hasCompletedOnboarding: user.hasCompletedOnboarding,
-              dailyGoal: 30, // Default daily goal
-            };
-          }
-
           return null;
         }
       },
@@ -106,9 +58,7 @@ export const authOptions = {
   jwt: {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret:
-    process.env.NEXTAUTH_SECRET ||
-    "fallback-secret-for-development-only-change-in-production",
+  secret: process.env.NEXTAUTH_SECRET!,
   pages: {
     signIn: "/auth/signin",
   },
@@ -118,6 +68,8 @@ export const authOptions = {
         token.id = user.id;
         token.hasCompletedOnboarding = user.hasCompletedOnboarding;
         token.dailyGoal = user.dailyGoal;
+        // Store the backend JWT token in the NextAuth token
+        token.backendToken = user.backendToken;
       }
       return token;
     },
@@ -126,6 +78,8 @@ export const authOptions = {
         session.user.id = token.id;
         session.user.hasCompletedOnboarding = token.hasCompletedOnboarding;
         session.user.dailyGoal = token.dailyGoal;
+        // Include the backend token in the session
+        (session as any).backendToken = token.backendToken;
       }
       return session;
     },
@@ -140,5 +94,5 @@ export const authOptions = {
       return baseUrl;
     },
   },
-  debug: process.env.NODE_ENV === "development",
+  debug: false,
 };

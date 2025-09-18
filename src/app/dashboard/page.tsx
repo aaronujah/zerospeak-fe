@@ -3,9 +3,25 @@
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/Button";
 import AppLayout from "@/components/layout/AppLayout";
+import AuthGuard from "@/components/auth/AuthGuard";
+import AuthLoading from "@/components/auth/AuthLoading";
+import { useCurrentUser } from "@/hooks/useUsers";
+import { useProgress } from "@/hooks/useProgress";
+import { useContent } from "@/hooks/useContent";
+import { useUserActivities } from "@/hooks/useUsers";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { data: session } = useSession();
+
+  // Use API hooks for live data
+  const { data: user, loading: userLoading } = useCurrentUser();
+  const { data: progress, loading: progressLoading } = useProgress();
+  const { data: content, loading: contentLoading } = useContent(
+    "video",
+    "beginner",
+    "es"
+  );
+  const { data: activities, loading: activitiesLoading } = useUserActivities();
 
   return (
     <AppLayout>
@@ -30,7 +46,9 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-slate-600">
                     Today's Goal
                   </p>
-                  <p className="text-2xl font-bold text-slate-900">15 min</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {user?.dailyGoal || 30} min
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
                   <svg
@@ -55,7 +73,9 @@ export default function DashboardPage() {
                     style={{ width: "60%" }}
                   ></div>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">9 min completed</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {(progress as any)?.timeSpent || 0} min completed
+                </p>
               </div>
             </div>
 
@@ -65,7 +85,9 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-slate-600">
                     Current Streak
                   </p>
-                  <p className="text-2xl font-bold text-slate-900">7 days</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {(progress as any)?.streak || 0} days
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                   <svg
@@ -92,7 +114,9 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-slate-600">
                     Total Hours
                   </p>
-                  <p className="text-2xl font-bold text-slate-900">24.5h</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {(progress as any)?.totalTimeSpent || 0}h
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <svg
@@ -130,89 +154,76 @@ export default function DashboardPage() {
 
                 <div className="p-6">
                   {/* Featured Content */}
-                  <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl p-6 mb-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-16 h-16 bg-emerald-500 rounded-xl flex items-center justify-center">
-                        <svg
-                          className="w-8 h-8 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-slate-900 mb-1">
-                          A Day at the Market
-                        </h3>
-                        <p className="text-slate-600 mb-3">
-                          Follow Maria as she shops for fresh ingredients. Rich
-                          visual context with everyday vocabulary.
-                        </p>
-                        <div className="flex items-center space-x-4 text-sm text-slate-500 mb-4">
-                          <span>📚 Story</span>
-                          <span>⏱️ 8 minutes</span>
-                          <span>🌱 Beginner</span>
+                  {content && content.length > 0 && (
+                    <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl p-6 mb-6">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-16 h-16 bg-emerald-500 rounded-xl flex items-center justify-center">
+                          <svg
+                            className="w-8 h-8 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            />
+                          </svg>
                         </div>
-                        <Button className="w-full sm:w-auto">
-                          Start Watching
-                        </Button>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-slate-900 mb-1">
+                            {content[0].title}
+                          </h3>
+                          <p className="text-slate-600 mb-3">
+                            {content[0].description}
+                          </p>
+                          <div className="flex items-center space-x-4 text-sm text-slate-500 mb-4">
+                            <span>📚 {content[0].type}</span>
+                            <span>⏱️ {content[0].duration} minutes</span>
+                            <span>🌱 {content[0].level}</span>
+                          </div>
+                          <Button className="w-full sm:w-auto">
+                            Start Watching
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Content List */}
                   <div className="space-y-4">
-                    <div className="flex items-center space-x-4 p-4 rounded-lg hover:bg-slate-50 transition-colors">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <span className="text-xl">🏠</span>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-slate-900">
-                          Morning Routine
-                        </h4>
-                        <p className="text-sm text-slate-600">
-                          Daily life vocabulary with visual cues
-                        </p>
-                      </div>
-                      <div className="text-sm text-slate-500">5 min</div>
-                    </div>
-
-                    <div className="flex items-center space-x-4 p-4 rounded-lg hover:bg-slate-50 transition-colors">
-                      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <span className="text-xl">🎭</span>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-slate-900">
-                          Cultural Traditions
-                        </h4>
-                        <p className="text-sm text-slate-600">
-                          Learn about festivals and customs
-                        </p>
-                      </div>
-                      <div className="text-sm text-slate-500">12 min</div>
-                    </div>
-
-                    <div className="flex items-center space-x-4 p-4 rounded-lg hover:bg-slate-50 transition-colors">
-                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <span className="text-xl">🌿</span>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-slate-900">
-                          Nature Walk
-                        </h4>
-                        <p className="text-sm text-slate-600">
-                          Animals and plants with beautiful imagery
-                        </p>
-                      </div>
-                      <div className="text-sm text-slate-500">7 min</div>
-                    </div>
+                    {content &&
+                      content.slice(1, 4).map((item, index) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center space-x-4 p-4 rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <span className="text-xl">
+                              {item.type === "video"
+                                ? "🎥"
+                                : item.type === "audio"
+                                ? "🎵"
+                                : item.type === "story"
+                                ? "📚"
+                                : "🎧"}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-slate-900">
+                              {item.title}
+                            </h4>
+                            <p className="text-sm text-slate-600">
+                              {item.description}
+                            </p>
+                          </div>
+                          <div className="text-sm text-slate-500">
+                            {item.duration} min
+                          </div>
+                        </div>
+                      ))}
                   </div>
                 </div>
               </div>
@@ -283,33 +294,30 @@ export default function DashboardPage() {
                   Recent Activity
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-slate-900">
-                        Completed "Family Dinner"
+                  {activities && activities.length > 0 ? (
+                    activities.slice(0, 3).map((activity, index) => (
+                      <div
+                        key={activity.id}
+                        className="flex items-center space-x-3"
+                      >
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-900">
+                            {(activity as any).description}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {new Date(activity.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-slate-500">
+                        No recent activity
                       </p>
-                      <p className="text-xs text-slate-500">2 hours ago</p>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-slate-900">
-                        Added journal entry
-                      </p>
-                      <p className="text-xs text-slate-500">Yesterday</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-slate-900">
-                        7-day streak achieved!
-                      </p>
-                      <p className="text-xs text-slate-500">Yesterday</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -329,5 +337,13 @@ export default function DashboardPage() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <AuthGuard fallback={<AuthLoading />}>
+      <DashboardContent />
+    </AuthGuard>
   );
 }

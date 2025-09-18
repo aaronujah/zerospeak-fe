@@ -58,29 +58,29 @@ export const lessonsApi = {
     if (level) params.append("level", level);
 
     const queryString = params.toString();
-    const endpoint = `/lessons${queryString ? `?${queryString}` : ""}`;
+    const endpoint = `/v1/lessons${queryString ? `?${queryString}` : ""}`;
     return apiClient.get<Lesson[]>(endpoint);
   },
 
   getLesson: async (id: string): Promise<Lesson> => {
-    return apiClient.get<Lesson>(`/lessons/${id}`);
+    return apiClient.get<Lesson>(`/v1/lessons/${id}`);
   },
 
   createLesson: async (data: CreateLessonDto): Promise<Lesson> => {
-    return apiClient.post<Lesson>("/lessons", data);
+    return apiClient.post<Lesson>("/v1/lessons", data);
   },
 
   updateLesson: async (id: string, data: UpdateLessonDto): Promise<Lesson> => {
-    return apiClient.put<Lesson>(`/lessons/${id}`, data);
+    return apiClient.put<Lesson>(`/v1/lessons/${id}`, data);
   },
 
   deleteLesson: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/lessons/${id}`);
+    return apiClient.delete<void>(`/v1/lessons/${id}`);
   },
 
   // Exercises
   getExercises: async (lessonId: string): Promise<Exercise[]> => {
-    return apiClient.get<Exercise[]>(`/lessons/${lessonId}/exercises`);
+    return apiClient.get<Exercise[]>(`/v1/lessons/${lessonId}/exercises`);
   },
 
   getExercisesByType: async (
@@ -88,32 +88,32 @@ export const lessonsApi = {
     type: string
   ): Promise<Exercise[]> => {
     return apiClient.get<Exercise[]>(
-      `/lessons/${lessonId}/exercises?type=${type}`
+      `/v1/lessons/${lessonId}/exercises?type=${type}`
     );
   },
 
   getExercise: async (id: string): Promise<Exercise> => {
-    return apiClient.get<Exercise>(`/exercises/${id}`);
+    return apiClient.get<Exercise>(`/v1/exercises/${id}`);
   },
 
   createExercise: async (data: CreateExerciseDto): Promise<Exercise> => {
-    return apiClient.post<Exercise>("/exercises", data);
+    return apiClient.post<Exercise>("/v1/exercises", data);
   },
 
   updateExercise: async (
     id: string,
     data: UpdateExerciseDto
   ): Promise<Exercise> => {
-    return apiClient.put<Exercise>(`/exercises/${id}`, data);
+    return apiClient.put<Exercise>(`/v1/exercises/${id}`, data);
   },
 
   deleteExercise: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/exercises/${id}`);
+    return apiClient.delete<void>(`/v1/exercises/${id}`);
   },
 
   // Exercise Validation
   validateExercise: async (data: ExerciseValidationDto): Promise<any> => {
-    return apiClient.post<any>("/exercises/validate", data);
+    return apiClient.post<any>("/v1/exercises/validate", data);
   },
 
   // Analytics
@@ -128,13 +128,13 @@ export const lessonsApi = {
     if (endDate) params.append("end", endDate);
 
     const queryString = params.toString();
-    const endpoint = `/lessons/analytics${
+    const endpoint = `/v1/lessons/analytics${
       queryString ? `?${queryString}` : ""
     }`;
     return apiClient.get<any>(endpoint);
   },
 
   getExerciseStats: async (exerciseId: string): Promise<any> => {
-    return apiClient.get<any>(`/exercises/${exerciseId}/stats`);
+    return apiClient.get<any>(`/v1/exercises/${exerciseId}/stats`);
   },
 };

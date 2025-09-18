@@ -42,62 +42,62 @@ export interface StudySessionDto {
 export const flashcardsApi = {
   // Flashcard Decks
   getDecks: async (): Promise<FlashCardDeck[]> => {
-    return apiClient.get<FlashCardDeck[]>("/flashcards/decks");
+    return apiClient.get<FlashCardDeck[]>("/v1/flashcard-decks");
   },
 
   getDeck: async (id: string): Promise<FlashCardDeck> => {
-    return apiClient.get<FlashCardDeck>(`/flashcards/decks/${id}`);
+    return apiClient.get<FlashCardDeck>(`/v1/flashcard-decks/${id}`);
   },
 
   createDeck: async (data: CreateFlashcardDeckDto): Promise<FlashCardDeck> => {
-    return apiClient.post<FlashCardDeck>("/flashcards/decks", data);
+    return apiClient.post<FlashCardDeck>("/v1/flashcard-decks", data);
   },
 
   updateDeck: async (
     id: string,
     data: UpdateFlashcardDeckDto
   ): Promise<FlashCardDeck> => {
-    return apiClient.put<FlashCardDeck>(`/flashcards/decks/${id}`, data);
+    return apiClient.put<FlashCardDeck>(`/v1/flashcard-decks/${id}`, data);
   },
 
   deleteDeck: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/flashcards/decks/${id}`);
+    return apiClient.delete<void>(`/v1/flashcard-decks/${id}`);
   },
 
   // Flashcards
   getFlashcards: async (deckId: string): Promise<FlashCard[]> => {
-    return apiClient.get<FlashCard[]>(`/flashcards/decks/${deckId}/cards`);
+    return apiClient.get<FlashCard[]>(`/v1/flashcards/deck/${deckId}`);
   },
 
   getFlashcard: async (id: string): Promise<FlashCard> => {
-    return apiClient.get<FlashCard>(`/flashcards/${id}`);
+    return apiClient.get<FlashCard>(`/v1/flashcards/${id}`);
   },
 
   createFlashcard: async (data: CreateFlashcardDto): Promise<FlashCard> => {
-    return apiClient.post<FlashCard>("/flashcards", data);
+    return apiClient.post<FlashCard>("/v1/flashcards", data);
   },
 
   updateFlashcard: async (
     id: string,
     data: UpdateFlashcardDto
   ): Promise<FlashCard> => {
-    return apiClient.put<FlashCard>(`/flashcards/${id}`, data);
+    return apiClient.put<FlashCard>(`/v1/flashcards/${id}`, data);
   },
 
   deleteFlashcard: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/flashcards/${id}`);
+    return apiClient.delete<void>(`/v1/flashcards/${id}`);
   },
 
   // Study Sessions
   getStudySessions: async (deckId?: string): Promise<StudySession[]> => {
     const endpoint = deckId
-      ? `/flashcards/study-sessions?deckId=${deckId}`
-      : "/flashcards/study-sessions";
+      ? `/v1/flashcards/study-sessions?deckId=${deckId}`
+      : "/v1/flashcards/study-sessions";
     return apiClient.get<StudySession[]>(endpoint);
   },
 
   createStudySession: async (data: StudySessionDto): Promise<StudySession> => {
-    return apiClient.post<StudySession>("/flashcards/study-sessions", data);
+    return apiClient.post<StudySession>("/v1/flashcards/study-sessions", data);
   },
 
   // Analytics
@@ -117,7 +117,7 @@ export const flashcardsApi = {
     if (endDate) params.append("end", endDate);
 
     const queryString = params.toString();
-    const endpoint = `/flashcards/decks/${deckId}/analytics${
+    const endpoint = `/v1/flashcard-decks/${deckId}/analytics${
       queryString ? `?${queryString}` : ""
     }`;
     return apiClient.get<{

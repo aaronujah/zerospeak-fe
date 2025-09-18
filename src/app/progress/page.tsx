@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
-import { Lesson } from "@/types/lessons";
-import { fetchLessons } from "@/lib/mockLessons";
+import AuthGuard from "@/components/auth/AuthGuard";
+import AuthLoading from "@/components/auth/AuthLoading";
+import { useProgress } from "@/hooks/useProgress";
+import { useUserActivities } from "@/hooks/useUsers";
+import { useUserAchievements } from "@/hooks/useUsers";
 
 interface ProgressStats {
   totalLessons: number;
@@ -185,107 +188,20 @@ const TypeProgressBar = ({
   </div>
 );
 
-export default function ProgressPage() {
-  const [stats, setStats] = useState<ProgressStats | null>(null);
-  const [loading, setLoading] = useState(true);
+function ProgressContent() {
+  // Use API hooks for live data
+  const {
+    data: progress,
+    loading: progressLoading,
+    error: progressError,
+  } = useProgress();
+  const { data: activities, loading: activitiesLoading } = useUserActivities();
+  const { data: achievements, loading: achievementsLoading } =
+    useUserAchievements();
 
-  useEffect(() => {
-    loadProgressData();
-  }, []);
+  const loading = progressLoading || activitiesLoading || achievementsLoading;
 
-  const loadProgressData = async () => {
-    try {
-      const allLessons = await fetchLessons();
-
-      const progressStats = calculateProgressStats(allLessons);
-      setStats(progressStats);
-    } catch (error) {
-      console.error("Failed to load progress data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateProgressStats = (lessons: Lesson[]): ProgressStats => {
-    const totalLessons = lessons.length;
-    const completedLessons = lessons.filter(
-      (lesson) => lesson.isCompleted
-    ).length;
-    const completionRate =
-      totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
-
-    // Calculate total study time for completed lessons
-    const totalStudyTime = lessons
-      .filter((lesson) => lesson.isCompleted)
-      .reduce((total, lesson) => total + lesson.duration, 0);
-
-    // Group by type
-    const lessonsByType: {
-      [key: string]: {
-        total: number;
-        completed: number;
-        completionRate: number;
-      };
-    } = {};
-    const types = [
-      "grammar",
-      "alphabet",
-      "phonetics",
-      "vocabulary",
-      "conversation",
-    ];
-
-    types.forEach((type) => {
-      const typeLessons = lessons.filter((lesson) => lesson.type === type);
-      const typeCompleted = typeLessons.filter(
-        (lesson) => lesson.isCompleted
-      ).length;
-      lessonsByType[type] = {
-        total: typeLessons.length,
-        completed: typeCompleted,
-        completionRate:
-          typeLessons.length > 0
-            ? (typeCompleted / typeLessons.length) * 100
-            : 0,
-      };
-    });
-
-    // Group by level
-    const lessonsByLevel: {
-      [key: string]: {
-        total: number;
-        completed: number;
-        completionRate: number;
-      };
-    } = {};
-    const levels = ["beginner", "intermediate", "advanced"];
-
-    levels.forEach((level) => {
-      const levelLessons = lessons.filter((lesson) => lesson.level === level);
-      const levelCompleted = levelLessons.filter(
-        (lesson) => lesson.isCompleted
-      ).length;
-      lessonsByLevel[level] = {
-        total: levelLessons.length,
-        completed: levelCompleted,
-        completionRate:
-          levelLessons.length > 0
-            ? (levelCompleted / levelLessons.length) * 100
-            : 0,
-      };
-    });
-
-    return {
-      totalLessons,
-      completedLessons,
-      completionRate,
-      totalStudyTime,
-      currentStreak: 5, // Mock data
-      longestStreak: 12, // Mock data
-      lessonsByType,
-      lessonsByLevel,
-    };
-  };
+  // No need for calculateProgressStats since we're using API data
 
   if (loading) {
     return (
@@ -306,7 +222,21 @@ export default function ProgressPage() {
     );
   }
 
-  if (!stats) return null;
+  if (progressError) {
+    return (
+      <AppLayout>
+        <div className="min-h-screen bg-slate-50 p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center py-12">
+              <p className="text-red-600">
+                Error loading progress data: {progressError.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const typeIcons = {
     grammar: "📚",
@@ -351,28 +281,28 @@ export default function ProgressPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <ProgressCard
               title="Immersion Time"
-              value={`${stats.totalStudyTime}min`}
+              value={`${progress?.timeSpent || 0}min`}
               subtitle="Total time spent in immersion"
               icon="⏱️"
               color="border-blue-200"
             />
             <ProgressCard
               title="Lessons Completed"
-              value={stats.completedLessons}
-              subtitle={`${stats.completionRate.toFixed(0)}% of total lessons`}
+              value={progress?.completedLessons || 0}
+              subtitle={`${progress?.completionRate || 0}% of total lessons`}
               icon="✅"
               color="border-emerald-200"
             />
             <ProgressCard
               title="Current Streak"
-              value={`${stats.currentStreak} days`}
+              value={`${progress?.streak || 0} days`}
               subtitle="Keep it going!"
               icon="🔥"
               color="border-orange-200"
             />
             <ProgressCard
-              title="Longest Streak"
-              value={`${stats.longestStreak} days`}
+              title="Total Hours"
+              value={`${progress?.totalTimeSpent || 0}h`}
               subtitle="Personal best"
               icon="🏆"
               color="border-purple-200"
@@ -387,15 +317,23 @@ export default function ProgressPage() {
                   Progress by Lesson Type
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(stats.lessonsByType).map(
-                    ([type, typeStats]) => (
-                      <TypeProgressBar
-                        key={type}
-                        type={type}
-                        stats={typeStats}
-                        icon={typeIcons[type as keyof typeof typeIcons]}
-                      />
+                  {progress?.lessonsByType ? (
+                    Object.entries(progress.lessonsByType).map(
+                      ([type, typeStats]) => (
+                        <TypeProgressBar
+                          key={type}
+                          type={type}
+                          stats={typeStats}
+                          icon={
+                            typeIcons[type as keyof typeof typeIcons] || "📚"
+                          }
+                        />
+                      )
                     )
+                  ) : (
+                    <div className="col-span-2 text-center py-8 text-slate-500">
+                      No progress data available
+                    </div>
                   )}
                 </div>
               </div>
@@ -407,38 +345,39 @@ export default function ProgressPage() {
                 </h2>
                 <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                   <div className="divide-y divide-slate-200">
-                    {recentActivity.map((activity, index) => (
-                      <div
-                        key={index}
-                        className="p-4 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0">
-                            <span className="text-lg">
-                              {
-                                typeIcons[
-                                  activity.type as keyof typeof typeIcons
-                                ]
-                              }
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900">
-                              {activity.action}: {activity.lesson}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {activity.duration} minutes •{" "}
-                              {new Date(activity.date).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex-shrink-0">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                              {activity.type}
-                            </span>
+                    {activities && activities.length > 0 ? (
+                      activities.slice(0, 5).map((activity, index) => (
+                        <div
+                          key={activity.id}
+                          className="p-4 hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              <span className="text-lg">📚</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-900">
+                                {activity.description}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {new Date(
+                                  activity.createdAt
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex-shrink-0">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                {activity.type}
+                              </span>
+                            </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-slate-500">
+                        No recent activity
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
@@ -450,51 +389,59 @@ export default function ProgressPage() {
                 Achievements
               </h2>
               <div className="space-y-3">
-                {achievements.map((achievement) => (
-                  <div
-                    key={achievement.id}
-                    className={`p-4 rounded-lg border transition-all ${
-                      achievement.unlocked
-                        ? "bg-white border-emerald-200 shadow-sm"
-                        : "bg-slate-50 border-slate-200 opacity-60"
-                    }`}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div
-                        className={`text-2xl ${
-                          achievement.unlocked ? "" : "grayscale"
-                        }`}
-                      >
-                        {achievement.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`font-medium ${
-                            achievement.unlocked
-                              ? "text-slate-900"
-                              : "text-slate-500"
+                {achievements && achievements.length > 0 ? (
+                  achievements.map((achievement) => (
+                    <div
+                      key={achievement.id}
+                      className={`p-4 rounded-lg border transition-all ${
+                        achievement.isUnlocked
+                          ? "bg-white border-emerald-200 shadow-sm"
+                          : "bg-slate-50 border-slate-200 opacity-60"
+                      }`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div
+                          className={`text-2xl ${
+                            achievement.isUnlocked ? "" : "grayscale"
                           }`}
                         >
-                          {achievement.title}
-                        </p>
-                        <p className="text-sm text-slate-600 mt-1">
-                          {achievement.description}
-                        </p>
-                        {achievement.unlocked && achievement.unlockedAt && (
-                          <p className="text-xs text-emerald-600 mt-2">
-                            Unlocked{" "}
-                            {new Date(
-                              achievement.unlockedAt
-                            ).toLocaleDateString()}
+                          {achievement.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`font-medium ${
+                              achievement.isUnlocked
+                                ? "text-slate-900"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            {achievement.title}
                           </p>
-                        )}
-                        {!achievement.unlocked && (
-                          <p className="text-xs text-slate-400 mt-2">Locked</p>
-                        )}
+                          <p className="text-sm text-slate-600 mt-1">
+                            {achievement.description}
+                          </p>
+                          {achievement.isUnlocked && achievement.unlockedAt && (
+                            <p className="text-xs text-emerald-600 mt-2">
+                              Unlocked{" "}
+                              {new Date(
+                                achievement.unlockedAt
+                              ).toLocaleDateString()}
+                            </p>
+                          )}
+                          {!achievement.isUnlocked && (
+                            <p className="text-xs text-slate-400 mt-2">
+                              Locked
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    No achievements available
                   </div>
-                ))}
+                )}
               </div>
 
               {/* Level Progress */}
@@ -503,38 +450,44 @@ export default function ProgressPage() {
                   Progress by Level
                 </h2>
                 <div className="space-y-3">
-                  {Object.entries(stats.lessonsByLevel).map(
-                    ([level, levelStats]) => (
-                      <div
-                        key={level}
-                        className="bg-white rounded-lg p-4 border border-slate-200"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-slate-900 capitalize flex items-center space-x-2">
-                            <span>
-                              {level === "beginner"
-                                ? "🌱"
-                                : level === "intermediate"
-                                ? "⚡"
-                                : "🚀"}
+                  {progress?.lessonsByLevel ? (
+                    Object.entries(progress.lessonsByLevel).map(
+                      ([level, levelStats]) => (
+                        <div
+                          key={level}
+                          className="bg-white rounded-lg p-4 border border-slate-200"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-slate-900 capitalize flex items-center space-x-2">
+                              <span>
+                                {level === "beginner"
+                                  ? "🌱"
+                                  : level === "intermediate"
+                                  ? "⚡"
+                                  : "🚀"}
+                              </span>
+                              <span>{level}</span>
                             </span>
-                            <span>{level}</span>
-                          </span>
-                          <span className="text-sm text-slate-500">
-                            {levelStats.completed}/{levelStats.total}
-                          </span>
+                            <span className="text-sm text-slate-500">
+                              {levelStats.completed}/{levelStats.total}
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-2">
+                            <div
+                              className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${levelStats.completionRate}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {levelStats.completionRate.toFixed(0)}% complete
+                          </p>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div
-                            className="bg-purple-500 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${levelStats.completionRate}%` }}
-                          ></div>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          {levelStats.completionRate.toFixed(0)}% complete
-                        </p>
-                      </div>
+                      )
                     )
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      No level progress data available
+                    </div>
                   )}
                 </div>
               </div>
@@ -543,5 +496,13 @@ export default function ProgressPage() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+export default function ProgressPage() {
+  return (
+    <AuthGuard fallback={<AuthLoading />}>
+      <ProgressContent />
+    </AuthGuard>
   );
 }

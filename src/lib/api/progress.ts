@@ -55,44 +55,31 @@ export interface UpdateProgressDto {
 }
 
 export const progressApi = {
-  // Progress Tracking
-  getProgress: async (
-    contentId?: string,
-    contentType?: string
-  ): Promise<ProgressItem[]> => {
+  // Overall Progress
+  getOverallProgress: async (): Promise<any> => {
+    return apiClient.get<any>("/v1/progress/overall");
+  },
+
+  getProgressAnalytics: async (
+    startDate?: string,
+    endDate?: string
+  ): Promise<any> => {
     const params = new URLSearchParams();
-    if (contentId) params.append("contentId", contentId);
-    if (contentType) params.append("contentType", contentType);
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
 
     const queryString = params.toString();
-    const endpoint = `/progress${queryString ? `?${queryString}` : ""}`;
-    return apiClient.get<ProgressItem[]>(endpoint);
-  },
-
-  getProgressItem: async (id: string): Promise<ProgressItem> => {
-    return apiClient.get<ProgressItem>(`/progress/${id}`);
-  },
-
-  createProgress: async (data: CreateProgressDto): Promise<ProgressItem> => {
-    return apiClient.post<ProgressItem>("/progress", data);
-  },
-
-  updateProgress: async (
-    id: string,
-    data: UpdateProgressDto
-  ): Promise<ProgressItem> => {
-    return apiClient.put<ProgressItem>(`/progress/${id}`, data);
-  },
-
-  deleteProgress: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/progress/${id}`);
+    const endpoint = `/v1/progress/analytics${
+      queryString ? `?${queryString}` : ""
+    }`;
+    return apiClient.get<any>(endpoint);
   },
 
   // Lesson Progress
   getLessonProgress: async (lessonId?: string): Promise<ProgressItem[]> => {
     const endpoint = lessonId
-      ? `/progress/lessons/${lessonId}`
-      : "/progress/lessons";
+      ? `/v1/progress/lessons/${lessonId}`
+      : "/v1/progress/lessons";
     return apiClient.get<ProgressItem[]>(endpoint);
   },
 
@@ -100,14 +87,17 @@ export const progressApi = {
     lessonId: string,
     data: UpdateProgressDto
   ): Promise<ProgressItem> => {
-    return apiClient.put<ProgressItem>(`/progress/lessons/${lessonId}`, data);
+    return apiClient.put<ProgressItem>(
+      `/v1/progress/lessons/${lessonId}`,
+      data
+    );
   },
 
   // Content Progress
   getContentProgress: async (contentId?: string): Promise<ProgressItem[]> => {
     const endpoint = contentId
-      ? `/progress/content/${contentId}`
-      : "/progress/content";
+      ? `/v1/progress/content/${contentId}`
+      : "/v1/progress/content";
     return apiClient.get<ProgressItem[]>(endpoint);
   },
 
@@ -115,14 +105,17 @@ export const progressApi = {
     contentId: string,
     data: UpdateProgressDto
   ): Promise<ProgressItem> => {
-    return apiClient.put<ProgressItem>(`/progress/content/${contentId}`, data);
+    return apiClient.put<ProgressItem>(
+      `/v1/progress/content/${contentId}`,
+      data
+    );
   },
 
   // Flashcard Progress
   getFlashcardProgress: async (deckId?: string): Promise<ProgressItem[]> => {
     const endpoint = deckId
-      ? `/progress/flashcards/${deckId}`
-      : "/progress/flashcards";
+      ? `/v1/progress/flashcards/${deckId}`
+      : "/v1/progress/flashcards";
     return apiClient.get<ProgressItem[]>(endpoint);
   },
 
@@ -130,7 +123,10 @@ export const progressApi = {
     deckId: string,
     data: UpdateProgressDto
   ): Promise<ProgressItem> => {
-    return apiClient.put<ProgressItem>(`/progress/flashcards/${deckId}`, data);
+    return apiClient.put<ProgressItem>(
+      `/v1/progress/flashcards/${deckId}`,
+      data
+    );
   },
 
   // Analytics
@@ -143,7 +139,7 @@ export const progressApi = {
     if (endDate) params.append("end", endDate);
 
     const queryString = params.toString();
-    const endpoint = `/progress/analytics${
+    const endpoint = `/v1/progress/analytics${
       queryString ? `?${queryString}` : ""
     }`;
     return apiClient.get<any>(endpoint);

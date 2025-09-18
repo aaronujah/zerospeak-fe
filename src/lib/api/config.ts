@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 export interface ApiResponse<T> {
   data: T;
@@ -25,46 +26,47 @@ class ApiClient {
 
   private async getAuthToken(): Promise<string | null> {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("auth_token");
-      return token;
+      // First try to get token from localStorage (for direct API login)
+      const localToken = localStorage.getItem("auth_token");
+      if (localToken) {
+        return localToken;
+      }
+
+      // If no local token, try to get from NextAuth session
+      try {
+        const { getSession } = await import("next-auth/react");
+        const session = await getSession();
+        if (session && (session as any).backendToken) {
+          return (session as any).backendToken;
+        }
+      } catch (error) {
+        // Silently handle session retrieval errors
+      }
     }
     return null;
   }
 
   private async refreshToken(): Promise<string | null> {
+    // For now, refresh token functionality is not implemented in the backend
+    // Clear invalid tokens and redirect to login
     if (typeof window !== "undefined") {
-      const refreshToken = localStorage.getItem("refresh_token");
-      if (!refreshToken) return null;
-
-      try {
-        const response = await fetch(`${this.baseURL}/auth/refresh`, {
-          method: "POST",
-          headers: this.defaultHeaders,
-          body: JSON.stringify({ refreshToken }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          localStorage.setItem("auth_token", data.token);
-          localStorage.setItem("refresh_token", data.refreshToken);
-          return data.token;
-        }
-      } catch (error) {
-        console.error("Token refresh failed:", error);
-        // Clear invalid tokens
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("refresh_token");
-      }
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("refresh_token");
+      // Redirect to login page
+      window.location.href = "/auth/signin";
     }
     return null;
   }
 
   private async getHeaders(): Promise<Record<string, string>> {
     const token = await this.getAuthToken();
-    return {
-      ...this.defaultHeaders,
-      ...(token && { Authorization: `Bearer ${token}` }),
-    };
+    const headers = { ...this.defaultHeaders };
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    return headers;
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {

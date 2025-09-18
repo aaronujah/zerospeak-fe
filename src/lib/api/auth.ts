@@ -6,22 +6,24 @@ export interface LoginDto {
 }
 
 export interface RegisterDto {
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
-  name: string;
+  passwordConfirmation: string;
 }
 
 export interface AuthResponse {
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    image?: string;
-    dailyGoal: number;
-    isOnboarded: boolean;
-  };
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  imageUrl?: string;
+  dailyGoal?: number;
+  hasCompletedOnboarding: boolean;
   token: string;
-  refreshToken: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RefreshTokenDto {
@@ -31,36 +33,40 @@ export interface RefreshTokenDto {
 export const authApi = {
   // Authentication
   login: async (data: LoginDto): Promise<AuthResponse> => {
-    return apiClient.post<AuthResponse>("/auth/login", data);
+    return apiClient.post<AuthResponse>("/v1/login", data);
   },
 
   register: async (data: RegisterDto): Promise<AuthResponse> => {
-    return apiClient.post<AuthResponse>("/auth/register", data);
+    return apiClient.post<AuthResponse>("/v1/signup", data);
   },
 
   logout: async (): Promise<void> => {
-    return apiClient.post<void>("/auth/logout");
-  },
-
-  refreshToken: async (data: RefreshTokenDto): Promise<AuthResponse> => {
-    return apiClient.post<AuthResponse>("/auth/refresh", data);
+    // Clear tokens from localStorage
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("refresh_token");
+    }
+    // Note: Backend logout endpoint not implemented yet
   },
 
   // Password Reset
   requestPasswordReset: async (email: string): Promise<void> => {
-    return apiClient.post<void>("/auth/forgot-password", { email });
+    return apiClient.post<void>("/v1/password-reset-otp", { email });
   },
 
   resetPassword: async (token: string, password: string): Promise<void> => {
-    return apiClient.post<void>("/auth/reset-password", { token, password });
+    return apiClient.post<void>("/v1/verify-password-reset-otp", {
+      token,
+      password,
+    });
   },
 
   // Email Verification
   requestEmailVerification: async (): Promise<void> => {
-    return apiClient.post<void>("/auth/verify-email");
+    return apiClient.post<void>("/v1/auth/verify-email");
   },
 
   verifyEmail: async (token: string): Promise<void> => {
-    return apiClient.post<void>("/auth/verify-email", { token });
+    return apiClient.post<void>("/v1/auth/verify-email", { token });
   },
 };

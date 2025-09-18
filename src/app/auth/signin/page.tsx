@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -18,7 +18,11 @@ export default function SignInPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (status === "authenticated" && session) {
+    if (
+      status === "authenticated" &&
+      session?.user?.id &&
+      session?.user?.email
+    ) {
       const redirectPath = getRedirectPath(session);
       router.push(redirectPath);
     }
@@ -37,12 +41,14 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        setError(`Authentication failed: ${result.error}`);
       } else if (result?.ok) {
-        // Let the useEffect handle the redirect based on onboarding status
-        // The session will be updated and useEffect will trigger
+        // Redirect to dashboard after successful sign in
+        router.push("/dashboard");
+      } else {
+        setError("Authentication failed. Please try again.");
       }
-    } catch {
+    } catch (error) {
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
@@ -62,7 +68,7 @@ export default function SignInPage() {
   };
 
   // Don't render the form if already authenticated
-  if (status === "authenticated") {
+  if (status === "authenticated" && session?.user?.id && session?.user?.email) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -178,22 +184,6 @@ export default function SignInPage() {
               Sign In
             </Button>
           </form>
-
-          {/* Demo Accounts */}
-          <div className="mt-6 p-4 bg-emerald-50 rounded-xl">
-            <h3 className="text-sm font-semibold text-emerald-900 mb-2">
-              Demo Accounts
-            </h3>
-            <div className="text-xs text-emerald-800 space-y-1">
-              <p>
-                <strong>Completed onboarding:</strong> test@zerospeak.com /
-                password123
-              </p>
-              <p>
-                <strong>Needs onboarding:</strong> demo@zerospeak.com / demo123
-              </p>
-            </div>
-          </div>
 
           {/* Footer */}
           <div className="mt-6 text-center">

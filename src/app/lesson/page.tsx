@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import { Lesson } from "@/types/lessons";
-import { fetchLessons } from "@/lib/mockLessons";
+import { useLessons } from "@/hooks/useLessons";
 
 const LessonCard = ({ lesson }: { lesson: Lesson }) => {
   const router = useRouter();
@@ -119,12 +119,21 @@ const LessonSkeleton = () => (
 );
 
 export default function LessonPage() {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("all");
   const [levelFilter, setLevelFilter] = useState("all");
   const [isLevelDropdownOpen, setIsLevelDropdownOpen] = useState(false);
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+
+  // Use API hooks
+  const {
+    data: lessons,
+    loading,
+    error,
+    refetch,
+  } = useLessons(
+    "es", // Default to Spanish
+    levelFilter === "all" ? undefined : levelFilter
+  );
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
@@ -142,10 +151,6 @@ export default function LessonPage() {
     { value: "vocabulary", label: "Vocabulary", icon: "💬" },
     { value: "conversation", label: "Conversation", icon: "🗣️" },
   ];
-
-  useEffect(() => {
-    loadLessons();
-  }, [typeFilter, levelFilter]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -170,21 +175,6 @@ export default function LessonPage() {
     };
   }, []);
 
-  const loadLessons = async () => {
-    setLoading(true);
-    try {
-      const fetchedLessons = await fetchLessons(
-        typeFilter === "all" ? undefined : typeFilter,
-        levelFilter === "all" ? undefined : levelFilter
-      );
-      setLessons(fetchedLessons);
-    } catch (error) {
-      console.error("Failed to fetch lessons:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLevelChange = (level: string) => {
     setLevelFilter(levelFilter === level ? "all" : level);
     setIsLevelDropdownOpen(false);
@@ -196,7 +186,7 @@ export default function LessonPage() {
   };
 
   // Group lessons by type
-  const lessonsByType = lessons.reduce((acc, lesson) => {
+  const lessonsByType = (lessons || []).reduce((acc, lesson) => {
     if (!acc[lesson.type]) acc[lesson.type] = [];
     acc[lesson.type].push(lesson);
     return acc;
@@ -393,11 +383,27 @@ export default function LessonPage() {
               {/* Results Count */}
               <div className="ml-auto">
                 <span className="text-sm text-slate-500">
-                  {lessons.length} lesson{lessons.length !== 1 ? "s" : ""} found
+                  {lessons?.length || 0} lesson
+                  {(lessons?.length || 0) !== 1 ? "s" : ""} found
                 </span>
               </div>
             </div>
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800">
+                Error loading lessons: {error.message}
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="mt-2 text-red-600 hover:text-red-700 font-medium"
+              >
+                Try again
+              </button>
+            </div>
+          )}
 
           {/* Lesson Grid */}
           {loading ? (
@@ -436,14 +442,14 @@ export default function LessonPage() {
           ) : (
             // Simple grid when filtering by type
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {lessons.map((lesson) => (
+              {(lessons || []).map((lesson) => (
                 <LessonCard key={lesson.id} lesson={lesson} />
               ))}
             </div>
           )}
 
           {/* Empty State */}
-          {!loading && lessons.length === 0 && (
+          {!loading && (!lessons || lessons.length === 0) && (
             <div className="text-center py-12">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-2xl mb-4">
                 <svg

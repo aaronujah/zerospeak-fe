@@ -5,7 +5,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import ContentCard from "@/components/feed/ContentCard";
 import { ContentSkeletonGrid } from "@/components/feed/ContentSkeleton";
 import { ContentItem } from "@/types/content";
-import { fetchLikedContent } from "@/lib/mockData";
+import { contentApi } from "@/lib/api/content";
 
 export default function LikedPage() {
   const [content, setContent] = useState<ContentItem[]>([]);
@@ -52,11 +52,14 @@ export default function LikedPage() {
     setLoading(true);
 
     try {
-      const newItems = await fetchLikedContent(pageNum, 12);
+      // For now, we'll get all content and filter for liked items
+      // In a real implementation, the backend would have a liked endpoint
+      const allContent = await contentApi.getContent();
+      const likedItems = allContent.filter((item) => item.isLiked);
 
-      setContent((prev) => (reset ? newItems : [...prev, ...newItems]));
+      setContent((prev) => (reset ? likedItems : [...prev, ...likedItems]));
       setLoading(false);
-      setHasMore(newItems.length === 12);
+      setHasMore(false); // For now, we'll show all liked items at once
       setPage(pageNum);
     } catch (error) {
       console.error("Error loading liked content:", error);

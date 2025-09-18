@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
+import AuthGuard from "@/components/auth/AuthGuard";
+import AuthLoading from "@/components/auth/AuthLoading";
 import { JournalEntry, JournalFilters, JournalPrompt } from "@/types/journal";
 import {
-  fetchJournalEntries,
-  fetchJournalPrompts,
-  addJournalEntry,
-  updateJournalEntry,
-  deleteJournalEntry,
-} from "@/lib/mockJournal";
+  useJournalEntries,
+  useJournalPrompts,
+  useCreateJournalEntry,
+  useUpdateJournalEntry,
+  useDeleteJournalEntry,
+} from "@/hooks/useJournal";
 
 const EntryCard = ({
   entry,
@@ -24,50 +26,53 @@ const EntryCard = ({
   const maxPreviewLength = 200;
   const needsTruncation = entry.content.length > maxPreviewLength;
 
-  const getMoodIcon = () => {
-    switch (entry.mood) {
-      case "excited":
-        return "😍";
-      case "confident":
-        return "😊";
-      case "neutral":
-        return "😐";
-      case "frustrated":
-        return "😤";
-      case "tired":
-        return "😴";
-      default:
-        return "😐";
-    }
-  };
-
-  const getMoodColor = () => {
-    switch (entry.mood) {
-      case "excited":
-        return "bg-green-100 text-green-800";
-      case "confident":
-        return "bg-blue-100 text-blue-800";
-      case "neutral":
-        return "bg-gray-100 text-gray-800";
-      case "frustrated":
-        return "bg-red-100 text-red-800";
-      case "tired":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const getLanguageColor = () => {
-    switch (entry.language) {
-      case "spanish":
+    switch (entry.languageId) {
+      case "es":
         return "bg-orange-100 text-orange-800";
-      case "english":
+      case "en":
         return "bg-blue-100 text-blue-800";
-      case "mixed":
+      case "fr":
         return "bg-purple-100 text-purple-800";
+      case "de":
+        return "bg-yellow-100 text-yellow-800";
+      case "it":
+        return "bg-green-100 text-green-800";
+      case "pt":
+        return "bg-red-100 text-red-800";
+      case "ja":
+        return "bg-pink-100 text-pink-800";
+      case "ko":
+        return "bg-indigo-100 text-indigo-800";
+      case "zh":
+        return "bg-teal-100 text-teal-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getLanguageName = () => {
+    switch (entry.languageId) {
+      case "es":
+        return "Spanish";
+      case "en":
+        return "English";
+      case "fr":
+        return "French";
+      case "de":
+        return "German";
+      case "it":
+        return "Italian";
+      case "pt":
+        return "Portuguese";
+      case "ja":
+        return "Japanese";
+      case "ko":
+        return "Korean";
+      case "zh":
+        return "Chinese";
+      default:
+        return "Unknown";
     }
   };
 
@@ -130,20 +135,15 @@ const EntryCard = ({
 
       <div className="flex items-center gap-2 mb-4">
         <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${getMoodColor()}`}
-        >
-          {getMoodIcon()} {entry.mood}
-        </span>
-        <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${getLanguageColor()}`}
         >
-          {entry.language}
+          {getLanguageName()}
         </span>
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-          {entry.wordCount} words
+          {entry.wordCount || 0} words
         </span>
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-          {entry.readingTime} min read
+          {entry.readingTime || 0} min read
         </span>
       </div>
 
@@ -163,7 +163,7 @@ const EntryCard = ({
         )}
       </div>
 
-      {entry.tags.length > 0 && (
+      {entry.tags && entry.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-4">
           {entry.tags.map((tag, index) => (
             <span
@@ -189,9 +189,9 @@ const EntryCard = ({
             STUDY SESSION
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs text-emerald-600">
-            <div>{entry.studySession.duration} min</div>
-            <div>{entry.studySession.wordsLearned} words</div>
-            <div>{entry.studySession.lessonsCompleted} lessons</div>
+            <div>{entry.studySession.duration || 0} min</div>
+            <div>{entry.studySession.wordsLearned || 0} words</div>
+            <div>{entry.studySession.lessonsCompleted || 0} lessons</div>
           </div>
         </div>
       )}
@@ -199,13 +199,17 @@ const EntryCard = ({
   );
 };
 
-export default function JournalPage() {
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [prompts, setPrompts] = useState<JournalPrompt[]>([]);
-  const [loading, setLoading] = useState(true);
+function JournalContent() {
   const [showNewEntryModal, setShowNewEntryModal] = useState(false);
   const [showPromptsModal, setShowPromptsModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+
+  // Use API hooks
+  const { data: entries, loading, error, refetch } = useJournalEntries();
+  const { data: prompts } = useJournalPrompts();
+  const { mutate: createEntry, loading: creating } = useCreateJournalEntry();
+  const { mutate: updateEntry, loading: updating } = useUpdateJournalEntry();
+  const { mutate: deleteEntry, loading: deleting } = useDeleteJournalEntry();
 
   // Filters
   const [filters] = useState<JournalFilters>({
@@ -217,8 +221,7 @@ export default function JournalPage() {
   const [newEntryForm, setNewEntryForm] = useState({
     title: "",
     content: "",
-    mood: "neutral" as JournalEntry["mood"],
-    language: "mixed" as JournalEntry["language"],
+    languageId: "es", // Default to Spanish
     tags: "",
     promptId: "",
   });
@@ -228,25 +231,7 @@ export default function JournalPage() {
     content?: string;
   }>({});
 
-  useEffect(() => {
-    loadJournalData();
-  }, [filters]);
-
-  const loadJournalData = async () => {
-    setLoading(true);
-    try {
-      const [fetchedEntries, fetchedPrompts] = await Promise.all([
-        fetchJournalEntries(filters),
-        fetchJournalPrompts(),
-      ]);
-      setEntries(fetchedEntries);
-      setPrompts(fetchedPrompts);
-    } catch (error) {
-      console.error("Failed to load journal data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // No need for useEffect since hooks handle loading automatically
 
   const handleNewEntry = () => {
     setShowNewEntryModal(true);
@@ -254,8 +239,7 @@ export default function JournalPage() {
     setNewEntryForm({
       title: "",
       content: "",
-      mood: "neutral",
-      language: "mixed",
+      languageId: "es",
       tags: "",
       promptId: "",
     });
@@ -267,8 +251,7 @@ export default function JournalPage() {
     setNewEntryForm({
       title: entry.title,
       content: entry.content,
-      mood: entry.mood,
-      language: entry.language,
+      languageId: entry.languageId || "es",
       tags: entry.tags.join(", "),
       promptId: entry.prompt?.id || "",
     });
@@ -279,8 +262,8 @@ export default function JournalPage() {
   const handleDeleteEntry = async (id: string) => {
     if (confirm("Are you sure you want to delete this entry?")) {
       try {
-        await deleteJournalEntry(id);
-        await loadJournalData();
+        await deleteEntry(id);
+        refetch(); // Refresh the entries list
       } catch (error) {
         console.error("Failed to delete entry:", error);
       }
@@ -305,43 +288,32 @@ export default function JournalPage() {
   const handleSubmitEntry = async () => {
     if (!validateForm()) return;
 
-    const wordCount = newEntryForm.content.trim().split(/\s+/).length;
-    const readingTime = Math.max(1, Math.round(wordCount / 200));
-
-    const entryData: JournalEntry = {
-      id: editingEntry?.id || `entry-${Date.now()}`,
+    const entryData = {
       title: newEntryForm.title.trim(),
       content: newEntryForm.content.trim(),
-      mood: newEntryForm.mood,
-      language: newEntryForm.language,
+      languageId: newEntryForm.languageId,
       tags: newEntryForm.tags
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean),
-      wordCount,
-      readingTime,
-      createdAt: editingEntry?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      prompt: newEntryForm.promptId
-        ? prompts.find((p) => p.id === newEntryForm.promptId)
-        : undefined,
+      isPublic: false, // Default to private
     };
 
     try {
       if (editingEntry) {
-        await updateJournalEntry(entryData);
+        await updateEntry({ id: editingEntry.id, data: entryData });
       } else {
-        await addJournalEntry(entryData);
+        await createEntry(entryData);
       }
 
       setShowNewEntryModal(false);
-      await loadJournalData();
+      refetch(); // Refresh the entries list
     } catch (error) {
       console.error("Failed to save entry:", error);
     }
   };
 
-  const filteredEntries = entries.filter((entry) => {
+  const filteredEntries = (entries || []).filter((entry) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -439,6 +411,21 @@ export default function JournalPage() {
             </div>
           </div>
 
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800">
+                Error loading journal: {error.message}
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="mt-2 text-red-600 hover:text-red-700 font-medium"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
           {/* Search and Filters */}
           <div className="flex items-center space-x-4 mb-6">
             <div className="flex-1 max-w-md">
@@ -476,7 +463,8 @@ export default function JournalPage() {
                 Recent Entries
               </h2>
               <span className="text-sm text-slate-600">
-                Showing {filteredEntries.length} of {entries.length} entries
+                Showing {filteredEntries.length} of {entries?.length || 0}{" "}
+                entries
               </span>
             </div>
 
@@ -597,48 +585,30 @@ export default function JournalPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Mood
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
-                      value={newEntryForm.mood}
-                      onChange={(e) =>
-                        setNewEntryForm({
-                          ...newEntryForm,
-                          mood: e.target.value as JournalEntry["mood"],
-                        })
-                      }
-                    >
-                      <option value="excited">😍 Excited</option>
-                      <option value="confident">😊 Confident</option>
-                      <option value="neutral">😐 Neutral</option>
-                      <option value="frustrated">😤 Frustrated</option>
-                      <option value="tired">😴 Tired</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Language
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
-                      value={newEntryForm.language}
-                      onChange={(e) =>
-                        setNewEntryForm({
-                          ...newEntryForm,
-                          language: e.target.value as JournalEntry["language"],
-                        })
-                      }
-                    >
-                      <option value="spanish">🇪🇸 Spanish</option>
-                      <option value="english">🇺🇸 English</option>
-                      <option value="mixed">🌎 Mixed</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Language
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                    value={newEntryForm.languageId}
+                    onChange={(e) =>
+                      setNewEntryForm({
+                        ...newEntryForm,
+                        languageId: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="es">🇪🇸 Spanish</option>
+                    <option value="en">🇺🇸 English</option>
+                    <option value="fr">🇫🇷 French</option>
+                    <option value="de">🇩🇪 German</option>
+                    <option value="it">🇮🇹 Italian</option>
+                    <option value="pt">🇵🇹 Portuguese</option>
+                    <option value="ja">🇯🇵 Japanese</option>
+                    <option value="ko">🇰🇷 Korean</option>
+                    <option value="zh">🇨🇳 Chinese</option>
+                  </select>
                 </div>
 
                 <div>
@@ -690,9 +660,14 @@ export default function JournalPage() {
                   <button
                     type="button"
                     onClick={handleSubmitEntry}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
+                    disabled={creating || updating}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50"
                   >
-                    {editingEntry ? "Update Entry" : "Save Entry"}
+                    {creating || updating
+                      ? "Saving..."
+                      : editingEntry
+                      ? "Update Entry"
+                      : "Save Entry"}
                   </button>
                 </div>
               </div>
@@ -724,7 +699,7 @@ export default function JournalPage() {
               </div>
 
               <div className="grid gap-4">
-                {prompts.map((prompt) => (
+                {(prompts || []).map((prompt) => (
                   <div key={prompt.id} className="bg-slate-50 rounded-lg p-4">
                     <div className="flex items-start justify-between mb-2">
                       <h4 className="font-medium text-slate-900">
@@ -761,7 +736,7 @@ export default function JournalPage() {
                         </span>
                       </div>
                     </div>
-                    <p className="text-slate-700 mb-3">{prompt.question}</p>
+                    <p className="text-slate-700 mb-3">{prompt.prompt}</p>
                     {prompt.example && (
                       <div className="text-sm text-slate-500 italic">
                         Example: {prompt.example}
@@ -798,5 +773,13 @@ export default function JournalPage() {
         </div>
       )}
     </AppLayout>
+  );
+}
+
+export default function JournalPage() {
+  return (
+    <AuthGuard fallback={<AuthLoading />}>
+      <JournalContent />
+    </AuthGuard>
   );
 }

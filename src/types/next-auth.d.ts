@@ -6,12 +6,16 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       hasCompletedOnboarding?: boolean;
+      dailyGoal?: number;
     };
+    backendToken?: string;
   }
 
   interface User {
     id: string;
     hasCompletedOnboarding?: boolean;
+    dailyGoal?: number;
+    backendToken?: string;
   }
 }
 
@@ -19,5 +23,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     hasCompletedOnboarding?: boolean;
+    dailyGoal?: number;
+    backendToken?: string;
   }
 }
